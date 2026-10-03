@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PsyLog - AI Digital Diary & Multi-Horizon Life Tracker</title>
+    <title>PsyLog - Multi-Page AI Digital Diary</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -41,29 +41,30 @@
 
     <!-- Header Section -->
     <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50">
-        <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
             <div class="flex items-center gap-3">
                 <div class="w-12 h-12 rounded-full border-2 border-amber-500/50 flex items-center justify-center bg-slate-800 shadow-lg shadow-amber-500/10">
-                    <span class="text-2xl">✒️️</span>
+                    <span class="text-2xl">✒</span>
                 </div>
                 <div>
                     <h1 class="text-2xl font-bold bg-gradient-to-r from-amber-200 via-amber-400 to-amber-500 bg-clip-text text-transparent">PsyLog</h1>
-                    <p class="text-xs text-slate-400">AI Digital Diary & Multi-Horizon Life Tracker</p>
+                    <p class="text-xs text-slate-400">Multi-Page AI Digital Diary & Life Tracker</p>
                 </div>
             </div>
             
-            <div class="flex items-center gap-2 bg-slate-800/80 border border-slate-700 px-3 py-1.5 rounded-full text-xs text-emerald-400">
-                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>Secure Serverless Proxy Active</span>
+            <div class="flex items-center gap-3">
+                <button onclick="createNewDateFolder()" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition shadow-lg shadow-amber-500/20">
+                    <span>📁 Start New Date Entry</span>
+                </button>
             </div>
         </div>
     </header>
 
     <!-- Navigation Tabs -->
-    <div class="max-w-6xl mx-auto px-4 mt-6">
+    <div class="max-w-7xl mx-auto px-4 mt-6">
         <div class="flex border-b border-slate-800 gap-2 sm:gap-6">
             <button id="tab1Btn" onclick="switchTab('tab1')" class="pb-3 px-2 font-medium text-amber-400 border-b-2 border-amber-400 transition flex items-center gap-2">
-                ✍️ Daily Entry & Canvas
+                📖 Diary Book & Pages
             </button>
             <button id="tab2Btn" onclick="switchTab('tab2')" class="pb-3 px-2 font-medium text-slate-400 hover:text-slate-200 transition flex items-center gap-2">
                 📊 Mood Analytics
@@ -75,86 +76,123 @@
     </div>
 
     <!-- Main Content Area -->
-    <main class="max-w-6xl mx-auto px-4 mt-6">
+    <main class="max-w-7xl mx-auto px-4 mt-6">
 
-        <!-- TAB 1: Daily Entry -->
+        <!-- TAB 1: Multi-Page Diary Editor -->
         <div id="tab1" class="space-y-6">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 
-                <!-- Left Column: Metrics & Journal -->
-                <div class="lg:col-span-2 space-y-6">
+                <!-- Left Sidebar: Date Folders & Saved Pages -->
+                <div class="lg:col-span-1 bg-slate-800/40 border border-slate-800 rounded-xl p-4 space-y-4">
+                    <div class="flex justify-between items-center border-b border-slate-700/60 pb-3">
+                        <h3 class="text-sm font-semibold text-amber-400 flex items-center gap-2">
+                            <span>📁 Saved Date Folders</span>
+                        </h3>
+                        <span id="folderCount" class="text-xs bg-amber-500/10 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full font-bold">0</span>
+                    </div>
                     
-                    <!-- Metrics Bar -->
-                    <div class="bg-slate-800/50 border border-slate-800 rounded-xl p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div>
-                            <label class="block text-xs font-medium text-amber-300/80 mb-1">Mood Score (1-10)</label>
-                            <input type="number" id="moodScore" min="1" max="10" value="7" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-amber-400 font-semibold focus:outline-none focus:border-amber-500">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-amber-300/80 mb-1">Sleep (Hours)</label>
-                            <input type="number" id="sleepHours" min="0" max="24" step="0.5" value="7.5" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-amber-500">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-medium text-amber-300/80 mb-1">Water Intake (Liters)</label>
-                            <input type="number" id="waterLiters" min="0" max="10" step="0.25" value="2" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-amber-500">
-                        </div>
+                    <div id="foldersList" class="space-y-2 max-h-[600px] overflow-y-auto pr-1">
+                        <!-- JS populated folders and pages -->
+                        <p class="text-xs text-slate-500 italic">No saved diary pages yet. Start writing on the right!</p>
                     </div>
-
-                    <!-- Emoji & Sticker Palette -->
-                    <div class="bg-slate-800/30 border border-slate-800/80 rounded-xl p-3 flex flex-wrap gap-2 items-center">
-                        <span class="text-xs text-slate-400 font-medium mr-2">Stickers:</span>
-                        <div class="flex flex-wrap gap-1.5" id="stickerPalette">
-                            <!-- JS populated stickers -->
-                        </div>
-                    </div>
-
-                    <!-- Journal Area -->
-                    <div class="bg-slate-800/50 border border-slate-800 rounded-xl p-4 relative">
-                        <label class="block text-xs font-medium text-slate-400 mb-2">Today's Reflection</label>
-                        <textarea id="journalText" rows="8" class="w-full bg-slate-900/90 text-slate-200 notebook-lines p-4 rounded-lg border border-slate-700/80 focus:outline-none focus:border-amber-500 resize-none font-sans" placeholder="Write your thoughts here... Click stickers above to insert!"></textarea>
-                    </div>
-
-                    <!-- AI Daily Coach Output -->
-                    <div id="aiReflectionBox" class="hidden bg-gradient-to-r from-amber-950/40 to-slate-800/60 border border-amber-500/30 rounded-xl p-4">
-                        <h4 class="text-sm font-semibold text-amber-400 flex items-center gap-2 mb-2">
-                            <span>✨ AI Psychological Reflection</span>
-                        </h4>
-                        <p id="aiReflectionContent" class="text-sm text-slate-300 italic font-handwriting text-lg leading-relaxed"></p>
-                    </div>
-
-                    <button onclick="saveDailyEntry()" id="saveBtn" class="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold rounded-xl shadow-lg shadow-amber-500/20 transition duration-200 flex items-center justify-center gap-2">
-                        <span>💾 Save Entry & Generate Insight</span>
-                    </button>
                 </div>
 
-                <!-- Right Column: Memory Cutout & Canvas -->
-                <div class="space-y-6">
+                <!-- Right Area: Multi-Page Editor -->
+                <div class="lg:col-span-3 grid grid-cols-1 lg:grid-cols-3 gap-6">
                     
-                    <!-- Polaroid Memory Cutout -->
-                    <div class="bg-slate-800/50 border border-slate-800 rounded-xl p-4">
-                        <h3 class="text-sm font-medium text-slate-300 mb-3">Memory Cutout</h3>
-                        <div id="polaroidContainer" class="bg-amber-50/95 text-slate-900 p-4 pb-8 rounded shadow-xl polaroid-frame relative text-center">
-                            <div id="imagePreview" class="w-full h-48 bg-slate-200/80 rounded border-2 border-dashed border-slate-400 flex flex-col items-center justify-center overflow-hidden relative cursor-pointer" onclick="document.getElementById('photoInput').click()">
-                                <span class="text-3xl text-slate-400 mb-1">📷</span>
-                                <span class="text-xs text-slate-500 font-medium">Click to upload photo</span>
+                    <!-- Main Text, Pages & Metrics Area -->
+                    <div class="lg:col-span-2 space-y-6">
+                        
+                        <!-- Date & Page Controller Bar -->
+                        <div class="bg-slate-800/80 border border-slate-700 rounded-xl p-4 flex flex-wrap justify-between items-center gap-3">
+                            <div class="flex items-center gap-2">
+                                <span class="text-slate-400 text-xs font-semibold uppercase tracking-wider">📅 Date:</span>
+                                <input type="date" id="entryDate" onchange="onDateChange()" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-amber-400 text-sm font-medium focus:outline-none focus:border-amber-500">
                             </div>
-                            <input type="file" id="photoInput" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
-                            <p class="font-handwriting text-2xl text-slate-700 mt-3" id="polaroidCaption">Today's Snapshot</p>
-                            <button id="removePhotoBtn" onclick="removePhoto()" class="hidden absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full text-xs hover:bg-red-600">✕</button>
+
+                            <div class="flex items-center gap-2 bg-slate-900 px-3 py-1.5 rounded-lg border border-slate-700">
+                                <span class="text-xs text-slate-400">Page:</span>
+                                <select id="pageSelect" onchange="onPageSelectChange()" class="bg-transparent text-amber-300 text-xs font-bold focus:outline-none cursor-pointer">
+                                    <option value="0">Page 1</option>
+                                </select>
+                                <button onclick="addNewPageToCurrentDate()" class="bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded text-xs font-medium ml-2 transition">
+                                    ➕ Add New Page
+                                </button>
+                            </div>
                         </div>
+
+                        <!-- Metrics Bar -->
+                        <div class="bg-slate-800/50 border border-slate-800 rounded-xl p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-xs font-medium text-amber-300/80 mb-1">Mood Score (1-10)</label>
+                                <input type="number" id="moodScore" min="1" max="10" value="7" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-amber-400 font-semibold focus:outline-none focus:border-amber-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-amber-300/80 mb-1">Sleep (Hours)</label>
+                                <input type="number" id="sleepHours" min="0" max="24" step="0.5" value="7.5" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-amber-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-amber-300/80 mb-1">Water Intake (Liters)</label>
+                                <input type="number" id="waterLiters" min="0" max="10" step="0.25" value="2" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-amber-500">
+                            </div>
+                        </div>
+
+                        <!-- Emoji & Stickers Palette -->
+                        <div class="bg-slate-800/30 border border-slate-800/80 rounded-xl p-3 flex flex-wrap gap-2 items-center">
+                            <span class="text-xs text-slate-400 font-medium mr-2">Stickers:</span>
+                            <div class="flex flex-wrap gap-1.5" id="stickerPalette"></div>
+                        </div>
+
+                        <!-- Journal Area -->
+                        <div class="bg-slate-800/50 border border-slate-800 rounded-xl p-4 relative">
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="block text-xs font-medium text-slate-400" id="pageLabelHeader">Write Story for Page 1</label>
+                                <span class="text-[10px] text-amber-400/80 bg-amber-500/10 px-2 py-0.5 rounded">Auto-Save Enabled</span>
+                            </div>
+                            <textarea id="journalText" rows="10" class="w-full bg-slate-900/90 text-slate-200 notebook-lines p-4 rounded-lg border border-slate-700/80 focus:outline-none focus:border-amber-500 resize-none font-sans" placeholder="Write your thoughts here... You can add multiple pages for the same date!"></textarea>
+                        </div>
+
+                        <!-- AI Reflection Box -->
+                        <div id="aiReflectionBox" class="hidden bg-gradient-to-r from-amber-950/40 to-slate-800/60 border border-amber-500/30 rounded-xl p-4">
+                            <h4 class="text-sm font-semibold text-amber-400 flex items-center gap-2 mb-2">
+                                <span>✨ AI Psychological Reflection</span>
+                            </h4>
+                            <p id="aiReflectionContent" class="text-sm text-slate-300 italic font-handwriting text-lg leading-relaxed"></p>
+                        </div>
+
+                        <button onclick="saveCurrentPage()" id="saveBtn" class="w-full py-3.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold rounded-xl shadow-lg shadow-amber-500/20 transition duration-200 flex items-center justify-center gap-2">
+                            <span>💾 Save This Page & Get AI Insight</span>
+                        </button>
                     </div>
 
-                    <!-- HTML5 Doodle Canvas -->
-                    <div class="bg-slate-800/50 border border-slate-800 rounded-xl p-4">
-                        <div class="flex justify-between items-center mb-3">
-                            <h3 class="text-sm font-medium text-slate-300">Doodle & Signature Canvas</h3>
-                            <div class="flex items-center gap-2">
-                                <input type="color" id="canvasColor" value="#f59e0b" class="w-6 h-6 rounded border-0 cursor-pointer bg-transparent">
-                                <button onclick="setEraser()" id="eraserBtn" class="px-2 py-1 text-xs bg-slate-700 hover:bg-slate-600 rounded text-slate-300">🧹 Eraser</button>
-                                <button onclick="clearCanvas()" class="px-2 py-1 text-xs bg-red-950/40 border border-red-800/50 hover:bg-red-900/50 rounded text-red-300">Clear</button>
+                    <!-- Polaroid & Doodle Column -->
+                    <div class="space-y-6">
+                        <!-- Polaroid Memory Cutout -->
+                        <div class="bg-slate-800/50 border border-slate-800 rounded-xl p-4">
+                            <h3 class="text-sm font-medium text-slate-300 mb-3">Memory Cutout (Page Photo)</h3>
+                            <div id="polaroidContainer" class="bg-amber-50/95 text-slate-900 p-4 pb-8 rounded shadow-xl polaroid-frame relative text-center">
+                                <div id="imagePreview" class="w-full h-48 bg-slate-200/80 rounded border-2 border-dashed border-slate-400 flex flex-col items-center justify-center overflow-hidden relative cursor-pointer" onclick="document.getElementById('photoInput').click()">
+                                    <span class="text-3xl text-slate-400 mb-1">📷</span>
+                                    <span class="text-xs text-slate-500 font-medium">Click to upload photo</span>
+                                </div>
+                                <input type="file" id="photoInput" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+                                <p class="font-handwriting text-2xl text-slate-700 mt-3" id="polaroidCaption">Memory Snapshot</p>
+                                <button id="removePhotoBtn" onclick="removePhoto()" class="hidden absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full text-xs hover:bg-red-600">✕</button>
                             </div>
                         </div>
-                        <canvas id="doodleCanvas" width="320" height="180" class="w-full bg-slate-950 rounded-lg border border-slate-700/80 cursor-crosshair touch-none"></canvas>
+
+                        <!-- Doodle Canvas -->
+                        <div class="bg-slate-800/50 border border-slate-800 rounded-xl p-4">
+                            <div class="flex justify-between items-center mb-3">
+                                <h3 class="text-sm font-medium text-slate-300">Doodle & Signature</h3>
+                                <div class="flex items-center gap-2">
+                                    <input type="color" id="canvasColor" value="#f59e0b" class="w-6 h-6 rounded border-0 cursor-pointer bg-transparent">
+                                    <button onclick="setEraser()" id="eraserBtn" class="px-2 py-1 text-xs bg-slate-700 hover:bg-slate-600 rounded text-slate-300">🧹 Eraser</button>
+                                    <button onclick="clearCanvas()" class="px-2 py-1 text-xs bg-red-950/40 border border-red-800/50 hover:bg-red-900/50 rounded text-red-300">Clear</button>
+                                </div>
+                            </div>
+                            <canvas id="doodleCanvas" width="320" height="180" class="w-full bg-slate-950 rounded-lg border border-slate-700/80 cursor-crosshair touch-none"></canvas>
+                        </div>
                     </div>
 
                 </div>
@@ -175,7 +213,7 @@
         <div id="tab3" class="hidden space-y-6">
             <div class="bg-slate-800/50 border border-slate-800 rounded-xl p-6">
                 <h3 class="text-lg font-semibold text-amber-400 mb-2">Multi-Horizon Life Reports</h3>
-                <p class="text-sm text-slate-400 mb-6">Select a horizon timeframe to analyze your emotional patterns, sleep quality, and journal trajectory.</p>
+                <p class="text-sm text-slate-400 mb-6">Select a horizon timeframe to analyze your saved diary entries.</p>
                 
                 <div class="flex flex-wrap gap-4 mb-6">
                     <button onclick="generateHorizonReport('Weekly')" class="px-5 py-2.5 bg-amber-500/10 border border-amber-500/40 hover:bg-amber-500/20 text-amber-300 font-medium rounded-lg transition">📅 Weekly Horizon</button>
@@ -198,8 +236,12 @@
         let currentPhotoBase64 = null;
         let isEraser = false;
         let chartInstance = null;
+        let currentPageIndex = 0;
 
-        // Render Stickers Palette
+        // Default Today's Date
+        document.getElementById('entryDate').valueAsDate = new Date();
+
+        // Sticker Palette
         const palette = document.getElementById('stickerPalette');
         stickers.forEach(sticker => {
             const btn = document.createElement('button');
@@ -213,7 +255,7 @@
             palette.appendChild(btn);
         });
 
-        // Tab Navigation
+        // Switch Tabs
         function switchTab(tabId) {
             ['tab1', 'tab2', 'tab3'].forEach(id => {
                 document.getElementById(id).classList.add('hidden');
@@ -225,7 +267,7 @@
             if(tabId === 'tab2') renderAnalytics();
         }
 
-        // HTML5 Canvas Logic
+        // HTML5 Canvas Setup
         const canvas = document.getElementById('doodleCanvas');
         const ctx = canvas.getContext('2d');
         let drawing = false;
@@ -292,36 +334,201 @@
             document.getElementById('removePhotoBtn').classList.add('hidden');
         }
 
-        // Save Entry and Trigger Gemini Proxy
-        async function saveDailyEntry() {
+        // --- MULTI-PAGE & DATE FOLDER SYSTEM --- //
+
+        function getStorageData() {
+            return JSON.parse(localStorage.getItem('psylog_notebook') || '{}');
+        }
+
+        function saveStorageData(data) {
+            localStorage.setItem('psylog_notebook', JSON.stringify(data));
+        }
+
+        function renderFoldersList() {
+            const notebook = getStorageData();
+            const listContainer = document.getElementById('foldersList');
+            const dates = Object.keys(notebook).sort().reverse();
+
+            document.getElementById('folderCount').innerText = dates.length;
+
+            if (dates.length === 0) {
+                listContainer.innerHTML = `<p class="text-xs text-slate-500 italic">No saved diary pages yet. Start writing on the right!</p>`;
+                return;
+            }
+
+            listContainer.innerHTML = '';
+            dates.forEach(dateStr => {
+                const pagesArr = notebook[dateStr] || [];
+                const folderDiv = document.createElement('div');
+                folderDiv.className = 'bg-slate-800/80 border border-slate-700/60 rounded-lg p-2.5 space-y-2';
+
+                let pagesHTML = '';
+                pagesArr.forEach((pg, idx) => {
+                    pagesHTML += `
+                        <div onclick="selectSpecificDateAndPage('${dateStr}', ${idx})" class="text-xs pl-4 py-1 rounded hover:bg-slate-700/80 cursor-pointer flex justify-between items-center text-slate-300 hover:text-amber-300">
+                            <span>📄 Page ${idx + 1}</span>
+                            <span class="text-[10px] text-slate-500 truncate w-20">${pg.text ? pg.text.substring(0, 15) + '...' : 'Empty'}</span>
+                        </div>
+                    `;
+                });
+
+                folderDiv.innerHTML = `
+                    <div class="flex justify-between items-center cursor-pointer" onclick="selectSpecificDateAndPage('${dateStr}', 0)">
+                        <div class="flex items-center gap-2">
+                            <span class="text-amber-400">📁</span>
+                            <span class="text-xs font-bold text-amber-300">${dateStr}</span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <span class="text-[10px] bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded-full">${pagesArr.length} pages</span>
+                            <button onclick="deleteDateFolder(event, '${dateStr}')" class="text-slate-500 hover:text-red-400 p-1 text-xs">🗑️</button>
+                        </div>
+                    </div>
+                    <div class="space-y-1 border-t border-slate-700/40 pt-1.5">
+                        ${pagesHTML}
+                    </div>
+                `;
+                listContainer.appendChild(folderDiv);
+            });
+        }
+
+        function loadCurrentDateAndPage() {
+            const dateStr = document.getElementById('entryDate').value;
+            const notebook = getStorageData();
+            const pagesArr = notebook[dateStr] || [];
+
+            // Update Page Dropdown options
+            const select = document.getElementById('pageSelect');
+            select.innerHTML = '';
+            
+            const totalPages = Math.max(pagesArr.length, 1);
+            for (let i = 0; i < totalPages; i++) {
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.innerText = `Page ${i + 1}`;
+                select.appendChild(opt);
+            }
+
+            if (currentPageIndex >= totalPages) currentPageIndex = totalPages - 1;
+            select.value = currentPageIndex;
+
+            document.getElementById('pageLabelHeader').innerText = `Write Story for Page ${currentPageIndex + 1}`;
+
+            // Fill page content
+            if (pagesArr[currentPageIndex]) {
+                const page = pagesArr[currentPageIndex];
+                document.getElementById('moodScore').value = page.mood || 7;
+                document.getElementById('sleepHours').value = page.sleep || 7.5;
+                document.getElementById('waterLiters').value = page.water || 2;
+                document.getElementById('journalText').value = page.text || '';
+
+                if (page.photo) {
+                    currentPhotoBase64 = page.photo;
+                    document.getElementById('imagePreview').innerHTML = `<img src="${currentPhotoBase64}" class="w-full h-full object-cover">`;
+                    document.getElementById('removePhotoBtn').classList.remove('hidden');
+                } else {
+                    removePhoto();
+                }
+
+                clearCanvas();
+                if (page.doodle) {
+                    const img = new Image();
+                    img.onload = () => ctx.drawImage(img, 0, 0);
+                    img.src = page.doodle;
+                }
+
+                if (page.aiReflection) {
+                    document.getElementById('aiReflectionContent').innerText = `"${page.aiReflection}"`;
+                    document.getElementById('aiReflectionBox').classList.remove('hidden');
+                } else {
+                    document.getElementById('aiReflectionBox').classList.add('hidden');
+                }
+            } else {
+                // Blank page state
+                document.getElementById('journalText').value = '';
+                removePhoto();
+                clearCanvas();
+                document.getElementById('aiReflectionBox').classList.add('hidden');
+            }
+        }
+
+        function onDateChange() {
+            currentPageIndex = 0;
+            loadCurrentDateAndPage();
+        }
+
+        function onPageSelectChange() {
+            currentPageIndex = parseInt(document.getElementById('pageSelect').value);
+            loadCurrentDateAndPage();
+        }
+
+        function addNewPageToCurrentDate() {
+            const dateStr = document.getElementById('entryDate').value;
+            const notebook = getStorageData();
+            if (!notebook[dateStr]) notebook[dateStr] = [];
+
+            // Add blank page object
+            notebook[dateStr].push({
+                mood: 7, sleep: 7.5, water: 2, text: '', photo: null, doodle: null, aiReflection: null
+            });
+            saveStorageData(notebook);
+
+            currentPageIndex = notebook[dateStr].length - 1;
+            renderFoldersList();
+            loadCurrentDateAndPage();
+        }
+
+        function createNewDateFolder() {
+            document.getElementById('entryDate').valueAsDate = new Date();
+            currentPageIndex = 0;
+            loadCurrentDateAndPage();
+        }
+
+        function selectSpecificDateAndPage(dateStr, pageIdx) {
+            document.getElementById('entryDate').value = dateStr;
+            currentPageIndex = pageIdx;
+            loadCurrentDateAndPage();
+        }
+
+        function deleteDateFolder(event, dateStr) {
+            event.stopPropagation();
+            if (confirm(`Delete folder for ${dateStr} and all its pages?`)) {
+                const notebook = getStorageData();
+                delete notebook[dateStr];
+                saveStorageData(notebook);
+                renderFoldersList();
+                loadCurrentDateAndPage();
+            }
+        }
+
+        // Save Current Page Data
+        async function saveCurrentPage() {
+            const dateStr = document.getElementById('entryDate').value;
             const mood = document.getElementById('moodScore').value;
             const sleep = document.getElementById('sleepHours').value;
             const water = document.getElementById('waterLiters').value;
             const text = document.getElementById('journalText').value;
 
             if(!text.trim()) {
-                alert('Please write a brief reflection before saving!');
+                alert('Please write something on this page before saving!');
                 return;
             }
 
-            const entry = {
-                date: new Date().toISOString(),
+            const notebook = getStorageData();
+            if (!notebook[dateStr]) notebook[dateStr] = [];
+
+            const pageData = {
                 mood: parseFloat(mood),
                 sleep: parseFloat(sleep),
                 water: parseFloat(water),
                 text: text,
                 photo: currentPhotoBase64,
-                doodle: canvas.toDataURL()
+                doodle: canvas.toDataURL(),
+                aiReflection: notebook[dateStr][currentPageIndex]?.aiReflection || null
             };
 
-            let entries = JSON.parse(localStorage.getItem('psylog_entries') || '[]');
-            entries.push(entry);
-            localStorage.setItem('psylog_entries', JSON.stringify(entries));
-
-            // Call Serverless Proxy
             const saveBtn = document.getElementById('saveBtn');
             saveBtn.disabled = true;
-            saveBtn.innerText = '✨ AI Analysis in progress...';
+            saveBtn.innerText = '✨ Saving & Getting AI Reflection...';
 
             try {
                 const response = await fetch('/api/reflect', {
@@ -329,12 +536,13 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         type: 'daily',
-                        prompt: `Journal Entry: "${text}". Mood Score: ${mood}/10, Sleep: ${sleep} hrs. Provide an empathetic 2-sentence psychological reflection & coaching statement directly addressing the user.`
+                        prompt: `Journal Entry for Date ${dateStr} (Page ${currentPageIndex + 1}): "${text}". Mood: ${mood}/10. Provide an empathetic 2-sentence psychological reflection directly addressing the user.`
                     })
                 });
 
                 const data = await response.json();
                 if (data.text) {
+                    pageData.aiReflection = data.text;
                     document.getElementById('aiReflectionContent').innerText = `"${data.text}"`;
                     document.getElementById('aiReflectionBox').classList.remove('hidden');
                 }
@@ -342,16 +550,24 @@
                 console.error(err);
             } finally {
                 saveBtn.disabled = false;
-                saveBtn.innerText = '💾 Save Entry & Generate Insight';
+                saveBtn.innerText = '💾 Save This Page & Get AI Insight';
+
+                notebook[dateStr][currentPageIndex] = pageData;
+                saveStorageData(notebook);
+
+                renderFoldersList();
+                loadCurrentDateAndPage();
             }
         }
 
         // Chart.js Rendering
         function renderAnalytics() {
-            const entries = JSON.parse(localStorage.getItem('psylog_entries') || '[]');
-            const labels = entries.slice(-10).map(e => new Date(e.date).toLocaleDateString([], {month:'short', day:'numeric'}));
-            const moodData = entries.slice(-10).map(e => e.mood);
-            const sleepData = entries.slice(-10).map(e => e.sleep);
+            const notebook = getStorageData();
+            const dates = Object.keys(notebook).sort();
+            
+            const labels = dates.slice(-10);
+            const moodData = labels.map(d => notebook[d][0]?.mood || 7);
+            const sleepData = labels.map(d => notebook[d][0]?.sleep || 7.5);
 
             const ctxChart = document.getElementById('analyticsChart').getContext('2d');
             if(chartInstance) chartInstance.destroy();
@@ -379,9 +595,11 @@
 
         // Multi-Horizon Life Reports
         async function generateHorizonReport(horizon) {
-            const entries = JSON.parse(localStorage.getItem('psylog_entries') || '[]');
-            if(entries.length === 0) {
-                alert('Please record at least one journal entry first!');
+            const notebook = getStorageData();
+            const keys = Object.keys(notebook);
+
+            if(keys.length === 0) {
+                alert('Please record at least one diary entry first!');
                 return;
             }
 
@@ -391,9 +609,9 @@
 
             output.classList.remove('hidden');
             title.innerText = `${horizon} Horizon Life Intelligence Report`;
-            content.innerText = 'Analyzing emotional trends across stored entries...';
+            content.innerText = 'Analyzing emotional trends across stored diary pages...';
 
-            const summaryPrompt = `Analyze the following user entries over a ${horizon} horizon: ${JSON.stringify(entries.slice(-15))}. Generate a structured summary covering: 1. Core Emotional Themes, 2. Sleep & Habit Trajectory, 3. Actionable Wellness Advice. Keep it concise, structured, and warm.`;
+            const summaryPrompt = `Analyze the user diary pages over a ${horizon} horizon: ${JSON.stringify(notebook)}. Generate a structured summary covering: 1. Core Emotional Themes, 2. Sleep & Habit Trajectory, 3. Actionable Wellness Advice. Keep it concise and warm.`;
 
             try {
                 const response = await fetch('/api/reflect', {
@@ -408,6 +626,10 @@
                 content.innerText = 'Error generating horizon report. Please try again.';
             }
         }
+
+        // Initialize on load
+        renderFoldersList();
+        loadCurrentDateAndPage();
     </script>
 </body>
 </html>

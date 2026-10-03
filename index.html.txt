@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PsyLog - AI Digital Diary & Multi-Horizon Life Tracker</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        amber: { 400: '#f59e0b', 500: '#d97706', 600: '#b45309' },
+                    },
+                    fontFamily: {
+                        handwriting: ['Caveat', 'cursive'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts & Chart.js -->
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .notebook-lines {
+            background-image: repeating-linear-gradient(transparent, transparent 31px, #334155 31px, #334155 32px);
+            line-height: 32px;
+        }
+        .polaroid-frame {
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s ease;
+        }
+        .polaroid-frame:hover { transform: rotate(-2deg) scale(1.02); }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen pb-12">
+
+    <!-- Header Section -->
+    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-full border-2 border-amber-500/50 flex items-center justify-center bg-slate-800 shadow-lg shadow-amber-500/10">
+                    <span class="text-2xl">✒️️</span>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold bg-gradient-to-r from-amber-200 via-amber-400 to-amber-500 bg-clip-text text-transparent">PsyLog</h1>
+                    <p class="text-xs text-slate-400">AI Digital Diary & Multi-Horizon Life Tracker</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-2 bg-slate-800/80 border border-slate-700 px-3 py-1.5 rounded-full text-xs text-emerald-400">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Secure Serverless Proxy Active</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <div class="max-w-6xl mx-auto px-4 mt-6">
+        <div class="flex border-b border-slate-800 gap-2 sm:gap-6">
+            <button id="tab1Btn" onclick="switchTab('tab1')" class="pb-3 px-2 font-medium text-amber-400 border-b-2 border-amber-400 transition flex items-center gap-2">
+                ✍️ Daily Entry & Canvas
+            </button>
+            <button id="tab2Btn" onclick="switchTab('tab2')" class="pb-3 px-2 font-medium text-slate-400 hover:text-slate-200 transition flex items-center gap-2">
+                📊 Mood Analytics
+            </button>
+            <button id="tab3Btn" onclick="switchTab('tab3')" class="pb-3 px-2 font-medium text-slate-400 hover:text-slate-200 transition flex items-center gap-2">
+                🔮 AI Horizon Reports
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <main class="max-w-6xl mx-auto px-4 mt-6">
+
+        <!-- TAB 1: Daily Entry -->
+        <div id="tab1" class="space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <!-- Left Column: Metrics & Journal -->
+                <div class="lg:col-span-2 space-y-6">
+                    
+                    <!-- Metrics Bar -->
+                    <div class="bg-slate-800/50 border border-slate-800 rounded-xl p-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium text-amber-300/80 mb-1">Mood Score (1-10)</label>
+                            <input type="number" id="moodScore" min="1" max="10" value="7" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-amber-400 font-semibold focus:outline-none focus:border-amber-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-amber-300/80 mb-1">Sleep (Hours)</label>
+                            <input type="number" id="sleepHours" min="0" max="24" step="0.5" value="7.5" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-amber-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-amber-300/80 mb-1">Water Intake (Liters)</label>
+                            <input type="number" id="waterLiters" min="0" max="10" step="0.25" value="2" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-amber-500">
+                        </div>
+                    </div>
+
+                    <!-- Emoji & Sticker Palette -->
+                    <div class="bg-slate-800/30 border border-slate-800/80 rounded-xl p-3 flex flex-wrap gap-2 items-center">
+                        <span class="text-xs text-slate-400 font-medium mr-2">Stickers:</span>
+                        <div class="flex flex-wrap gap-1.5" id="stickerPalette">
+                            <!-- JS populated stickers -->
+                        </div>
+                    </div>
+
+                    <!-- Journal Area -->
+                    <div class="bg-slate-800/50 border border-slate-800 rounded-xl p-4 relative">
+                        <label class="block text-xs font-medium text-slate-400 mb-2">Today's Reflection</label>
+                        <textarea id="journalText" rows="8" class="w-full bg-slate-900/90 text-slate-200 notebook-lines p-4 rounded-lg border border-slate-700/80 focus:outline-none focus:border-amber-500 resize-none font-sans" placeholder="Write your thoughts here... Click stickers above to insert!"></textarea>
+                    </div>
+
+                    <!-- AI Daily Coach Output -->
+                    <div id="aiReflectionBox" class="hidden bg-gradient-to-r from-amber-950/40 to-slate-800/60 border border-amber-500/30 rounded-xl p-4">
+                        <h4 class="text-sm font-semibold text-amber-400 flex items-center gap-2 mb-2">
+                            <span>✨ AI Psychological Reflection</span>
+                        </h4>
+                        <p id="aiReflectionContent" class="text-sm text-slate-300 italic font-handwriting text-lg leading-relaxed"></p>
+                    </div>
+
+                    <button onclick="saveDailyEntry()" id="saveBtn" class="w-full py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold rounded-xl shadow-lg shadow-amber-500/20 transition duration-200 flex items-center justify-center gap-2">
+                        <span>💾 Save Entry & Generate Insight</span>
+                    </button>
+                </div>
+
+                <!-- Right Column: Memory Cutout & Canvas -->
+                <div class="space-y-6">
+                    
+                    <!-- Polaroid Memory Cutout -->
+                    <div class="bg-slate-800/50 border border-slate-800 rounded-xl p-4">
+                        <h3 class="text-sm font-medium text-slate-300 mb-3">Memory Cutout</h3>
+                        <div id="polaroidContainer" class="bg-amber-50/95 text-slate-900 p-4 pb-8 rounded shadow-xl polaroid-frame relative text-center">
+                            <div id="imagePreview" class="w-full h-48 bg-slate-200/80 rounded border-2 border-dashed border-slate-400 flex flex-col items-center justify-center overflow-hidden relative cursor-pointer" onclick="document.getElementById('photoInput').click()">
+                                <span class="text-3xl text-slate-400 mb-1">📷</span>
+                                <span class="text-xs text-slate-500 font-medium">Click to upload photo</span>
+                            </div>
+                            <input type="file" id="photoInput" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
+                            <p class="font-handwriting text-2xl text-slate-700 mt-3" id="polaroidCaption">Today's Snapshot</p>
+                            <button id="removePhotoBtn" onclick="removePhoto()" class="hidden absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full text-xs hover:bg-red-600">✕</button>
+                        </div>
+                    </div>
+
+                    <!-- HTML5 Doodle Canvas -->
+                    <div class="bg-slate-800/50 border border-slate-800 rounded-xl p-4">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-sm font-medium text-slate-300">Doodle & Signature Canvas</h3>
+                            <div class="flex items-center gap-2">
+                                <input type="color" id="canvasColor" value="#f59e0b" class="w-6 h-6 rounded border-0 cursor-pointer bg-transparent">
+                                <button onclick="setEraser()" id="eraserBtn" class="px-2 py-1 text-xs bg-slate-700 hover:bg-slate-600 rounded text-slate-300">🧹 Eraser</button>
+                                <button onclick="clearCanvas()" class="px-2 py-1 text-xs bg-red-950/40 border border-red-800/50 hover:bg-red-900/50 rounded text-red-300">Clear</button>
+                            </div>
+                        </div>
+                        <canvas id="doodleCanvas" width="320" height="180" class="w-full bg-slate-950 rounded-lg border border-slate-700/80 cursor-crosshair touch-none"></canvas>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: Mood Analytics -->
+        <div id="tab2" class="hidden space-y-6">
+            <div class="bg-slate-800/50 border border-slate-800 rounded-xl p-6">
+                <h3 class="text-lg font-semibold text-amber-400 mb-4">Mood & Sleep History Analytics</h3>
+                <div class="h-80 w-full">
+                    <canvas id="analyticsChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: AI Horizon Intelligence -->
+        <div id="tab3" class="hidden space-y-6">
+            <div class="bg-slate-800/50 border border-slate-800 rounded-xl p-6">
+                <h3 class="text-lg font-semibold text-amber-400 mb-2">Multi-Horizon Life Reports</h3>
+                <p class="text-sm text-slate-400 mb-6">Select a horizon timeframe to analyze your emotional patterns, sleep quality, and journal trajectory.</p>
+                
+                <div class="flex flex-wrap gap-4 mb-6">
+                    <button onclick="generateHorizonReport('Weekly')" class="px-5 py-2.5 bg-amber-500/10 border border-amber-500/40 hover:bg-amber-500/20 text-amber-300 font-medium rounded-lg transition">📅 Weekly Horizon</button>
+                    <button onclick="generateHorizonReport('Monthly')" class="px-5 py-2.5 bg-amber-500/10 border border-amber-500/40 hover:bg-amber-500/20 text-amber-300 font-medium rounded-lg transition">🌙 Monthly Horizon</button>
+                    <button onclick="generateHorizonReport('Yearly')" class="px-5 py-2.5 bg-amber-500/10 border border-amber-500/40 hover:bg-amber-500/20 text-amber-300 font-medium rounded-lg transition">🌌 Yearly Horizon</button>
+                </div>
+
+                <div id="horizonOutput" class="hidden bg-slate-900 border border-slate-700/80 rounded-xl p-6 relative">
+                    <h4 id="horizonTitle" class="text-md font-bold text-amber-400 mb-3"></h4>
+                    <div id="horizonContent" class="text-slate-300 leading-relaxed space-y-3 text-sm"></div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- App Logic JavaScript -->
+    <script>
+        const stickers = ['😊', '🥰', '☕', '📚', '🎧', '🌿', '🌸', '⭐', '✨', '🎂', '✈️', '🎨', '📸', '💌'];
+        let currentPhotoBase64 = null;
+        let isEraser = false;
+        let chartInstance = null;
+
+        // Render Stickers Palette
+        const palette = document.getElementById('stickerPalette');
+        stickers.forEach(sticker => {
+            const btn = document.createElement('button');
+            btn.className = 'text-lg p-1.5 hover:bg-slate-700/60 rounded transition transform active:scale-95';
+            btn.innerText = sticker;
+            btn.onclick = () => {
+                const textarea = document.getElementById('journalText');
+                textarea.value += ' ' + sticker + ' ';
+                textarea.focus();
+            };
+            palette.appendChild(btn);
+        });
+
+        // Tab Navigation
+        function switchTab(tabId) {
+            ['tab1', 'tab2', 'tab3'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+                document.getElementById(id + 'Btn').className = 'pb-3 px-2 font-medium text-slate-400 hover:text-slate-200 transition flex items-center gap-2';
+            });
+            document.getElementById(tabId).classList.remove('hidden');
+            document.getElementById(tabId + 'Btn').className = 'pb-3 px-2 font-medium text-amber-400 border-b-2 border-amber-400 transition flex items-center gap-2';
+            
+            if(tabId === 'tab2') renderAnalytics();
+        }
+
+        // HTML5 Canvas Logic
+        const canvas = document.getElementById('doodleCanvas');
+        const ctx = canvas.getContext('2d');
+        let drawing = false;
+
+        function startDrawing(e) { drawing = true; draw(e); }
+        function stopDrawing() { drawing = false; ctx.beginPath(); }
+        function draw(e) {
+            if(!drawing) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX || e.touches[0].clientX) - rect.left;
+            const y = (e.clientY || e.touches[0].clientY) - rect.top;
+
+            ctx.lineWidth = isEraser ? 16 : 2;
+            ctx.lineCap = 'round';
+            if (isEraser) {
+                ctx.globalCompositeOperation = 'destination-out';
+            } else {
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.strokeStyle = document.getElementById('canvasColor').value;
+            }
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('touchstart', startDrawing);
+        canvas.addEventListener('touchend', stopDrawing);
+        canvas.addEventListener('touchmove', draw);
+
+        function setEraser() {
+            isEraser = !isEraser;
+            document.getElementById('eraserBtn').classList.toggle('bg-amber-500', isEraser);
+            document.getElementById('eraserBtn').classList.toggle('text-slate-950', isEraser);
+        }
+
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        // Photo Upload Handling
+        function handleImageUpload(e) {
+            const file = e.target.files[0];
+            if(file) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    currentPhotoBase64 = evt.target.result;
+                    const preview = document.getElementById('imagePreview');
+                    preview.innerHTML = `<img src="${currentPhotoBase64}" class="w-full h-full object-cover">`;
+                    document.getElementById('removePhotoBtn').classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function removePhoto() {
+            currentPhotoBase64 = null;
+            document.getElementById('imagePreview').innerHTML = `
+                <span class="text-3xl text-slate-400 mb-1">📷</span>
+                <span class="text-xs text-slate-500 font-medium">Click to upload photo</span>`;
+            document.getElementById('removePhotoBtn').classList.add('hidden');
+        }
+
+        // Save Entry and Trigger Gemini Proxy
+        async function saveDailyEntry() {
+            const mood = document.getElementById('moodScore').value;
+            const sleep = document.getElementById('sleepHours').value;
+            const water = document.getElementById('waterLiters').value;
+            const text = document.getElementById('journalText').value;
+
+            if(!text.trim()) {
+                alert('Please write a brief reflection before saving!');
+                return;
+            }
+
+            const entry = {
+                date: new Date().toISOString(),
+                mood: parseFloat(mood),
+                sleep: parseFloat(sleep),
+                water: parseFloat(water),
+                text: text,
+                photo: currentPhotoBase64,
+                doodle: canvas.toDataURL()
+            };
+
+            let entries = JSON.parse(localStorage.getItem('psylog_entries') || '[]');
+            entries.push(entry);
+            localStorage.setItem('psylog_entries', JSON.stringify(entries));
+
+            // Call Serverless Proxy
+            const saveBtn = document.getElementById('saveBtn');
+            saveBtn.disabled = true;
+            saveBtn.innerText = '✨ AI Analysis in progress...';
+
+            try {
+                const response = await fetch('/api/reflect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        type: 'daily',
+                        prompt: `Journal Entry: "${text}". Mood Score: ${mood}/10, Sleep: ${sleep} hrs. Provide an empathetic 2-sentence psychological reflection & coaching statement directly addressing the user.`
+                    })
+                });
+
+                const data = await response.json();
+                if (data.text) {
+                    document.getElementById('aiReflectionContent').innerText = `"${data.text}"`;
+                    document.getElementById('aiReflectionBox').classList.remove('hidden');
+                }
+            } catch (err) {
+                console.error(err);
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerText = '💾 Save Entry & Generate Insight';
+            }
+        }
+
+        // Chart.js Rendering
+        function renderAnalytics() {
+            const entries = JSON.parse(localStorage.getItem('psylog_entries') || '[]');
+            const labels = entries.slice(-10).map(e => new Date(e.date).toLocaleDateString([], {month:'short', day:'numeric'}));
+            const moodData = entries.slice(-10).map(e => e.mood);
+            const sleepData = entries.slice(-10).map(e => e.sleep);
+
+            const ctxChart = document.getElementById('analyticsChart').getContext('2d');
+            if(chartInstance) chartInstance.destroy();
+
+            chartInstance = new Chart(ctxChart, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Mood (1-10)', data: moodData, borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.1)', fill: true, tension: 0.3 },
+                        { label: 'Sleep (Hours)', data: sleepData, borderColor: '#38bdf8', backgroundColor: 'transparent', borderDash: [5, 5], tension: 0.3 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                        x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
+                    },
+                    plugins: { legend: { labels: { color: '#f8fafc' } } }
+                }
+            });
+        }
+
+        // Multi-Horizon Life Reports
+        async function generateHorizonReport(horizon) {
+            const entries = JSON.parse(localStorage.getItem('psylog_entries') || '[]');
+            if(entries.length === 0) {
+                alert('Please record at least one journal entry first!');
+                return;
+            }
+
+            const output = document.getElementById('horizonOutput');
+            const title = document.getElementById('horizonTitle');
+            const content = document.getElementById('horizonContent');
+
+            output.classList.remove('hidden');
+            title.innerText = `${horizon} Horizon Life Intelligence Report`;
+            content.innerText = 'Analyzing emotional trends across stored entries...';
+
+            const summaryPrompt = `Analyze the following user entries over a ${horizon} horizon: ${JSON.stringify(entries.slice(-15))}. Generate a structured summary covering: 1. Core Emotional Themes, 2. Sleep & Habit Trajectory, 3. Actionable Wellness Advice. Keep it concise, structured, and warm.`;
+
+            try {
+                const response = await fetch('/api/reflect', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type: 'horizon', prompt: summaryPrompt })
+                });
+
+                const data = await response.json();
+                content.innerHTML = data.text.replace(/\n/g, '<br>');
+            } catch (err) {
+                content.innerText = 'Error generating horizon report. Please try again.';
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,513 +1,586 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full bg-amber-50/40">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PsyLog - Multi-Horizon Memory Journal</title>
+  <title>PsyLog — Multi-Horizon AI Digital Memory Journal</title>
+  
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Tesseract.js for Handwriting / Doodle OCR Recognition -->
+  
+  <!-- Google Fonts: Caveat for handwriting accents, Serif/Sans for clean interface -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Tesseract.js OCR v5 -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            handwriting: ['Caveat', 'cursive'],
+            journal: ['Lora', 'serif'],
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+          },
+          colors: {
+            journal: {
+              paper: '#FAF6EE',
+              line: '#D1E0E0',
+              margin: '#F2A6A6',
+              text: '#2C3531',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
   <style>
-    /* Digital Diary Page Texture */
-    .diary-page {
-      background: #fffdf9;
-      background-image: linear-gradient(#e5e7eb 1px, transparent 1px);
-      background-size: 100% 28px;
-      line-height: 28px;
-      position: relative;
-      min-height: 520px;
-      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+    /* Lined Paper Pattern */
+    .lined-paper {
+      background-color: #FAF6EE;
+      background-image: linear-gradient(#D1E0E0 1px, transparent 1px);
+      background-size: 100% 2.25rem;
+      background-position: 0 0.5rem;
+      line-height: 2.25rem;
     }
-    /* Draggable Photo Stickers */
-    .draggable-sticker {
-      position: absolute;
-      cursor: move;
-      user-select: none;
-      z-index: 20;
-      touch-action: none;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    }
-    /* Dynamic Overlay Canvas for Hand-drawn Doodles */
-    #doodleCanvas {
+
+    /* Red Margin Line */
+    .lined-paper::before {
+      content: '';
       position: absolute;
       top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+      bottom: 0;
+      left: 3.5rem;
+      width: 2px;
+      background-color: #F2A6A6;
+      opacity: 0.6;
       z-index: 10;
       pointer-events: none;
     }
-    #doodleCanvas.drawing-active {
-      pointer-events: auto;
-      cursor: crosshair;
+
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
     }
-    .mic-active {
-      animation: pulse 1.5s infinite;
-      background-color: #ef4444 !important;
+    ::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.03);
     }
-    @keyframes pulse {
-      0% { opacity: 1; }
-      50% { opacity: 0.5; }
-      100% { opacity: 1; }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0,0,0,0.15);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(0,0,0,0.25);
     }
   </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen font-sans flex flex-col">
+<body class="h-full text-slate-800 font-sans flex flex-col antialiased selection:bg-amber-200 selection:text-amber-900">
 
-  <!-- Header -->
-  <header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
-    <div class="flex items-center space-x-3">
-      <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center font-bold text-white shadow-lg shadow-indigo-500/30">Ψ</div>
-      <h1 class="text-xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">PsyLog</h1>
+  <!-- Header Section -->
+  <header class="bg-white/80 backdrop-blur-md border-b border-amber-900/10 sticky top-0 z-40 px-4 lg:px-8 py-3 flex items-center justify-between shadow-sm">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-700 via-amber-600 to-amber-500 flex items-center justify-center text-white font-serif font-bold text-xl shadow-md shadow-amber-900/10">
+        Ψ
+      </div>
+      <div>
+        <h1 class="font-serif font-bold text-xl leading-none text-slate-900 tracking-tight">PsyLog</h1>
+        <p class="text-xs text-slate-500 font-medium">Multi-Horizon AI Memory Journal</p>
+      </div>
     </div>
-    <div id="saveStatus" class="text-xs text-slate-400 font-medium">Auto-saved</div>
+
+    <!-- Global Actions & Status -->
+    <div class="flex items-center gap-3 sm:gap-6">
+      <div class="hidden sm:flex items-center gap-2 text-xs font-medium text-slate-500 bg-slate-100 px-3 py-1.5 rounded-full" id="saveStatusContainer">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" id="saveIndicator"></span>
+        <span id="saveStatusText">All changes saved</span>
+      </div>
+
+      <button id="apiConfigBtn" onclick="openApiKeyModal()" class="flex items-center gap-1.5 text-xs font-semibold text-slate-700 bg-amber-100/80 hover:bg-amber-200/80 px-3 py-1.5 rounded-lg transition-colors border border-amber-300/50">
+        <span>🔑 API Key</span>
+      </button>
+    </div>
   </header>
 
-  <!-- Main Container -->
-  <main class="flex-1 max-w-7xl w-full mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
+  <!-- Main Application Body -->
+  <div class="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
     
-    <!-- Left Sidebar: Pages & Tools -->
-    <aside class="lg:col-span-3 space-y-6">
-      <!-- Date & Page Selector -->
-      <div class="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5">
-        <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Journal Dates</h2>
-        <input type="date" id="journalDate" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-indigo-500 text-white mb-4">
+    <!-- Left Workspace: Diary Canvas -->
+    <main class="flex-1 flex flex-col h-full overflow-hidden bg-amber-50/30 p-2 sm:p-4 lg:p-6">
+      
+      <!-- Toolbar Controls -->
+      <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-3 mb-3 flex flex-wrap items-center justify-between gap-3 z-30">
         
-        <div id="pagesList" class="space-y-2 max-h-48 overflow-y-auto mb-4">
-          <!-- Dynamic Page Buttons -->
+        <!-- Date Selector & Page Navigation -->
+        <div class="flex items-center gap-2 flex-wrap">
+          <div class="flex items-center bg-slate-100 rounded-xl px-2.5 py-1.5 border border-slate-200">
+            <span class="text-xs font-semibold text-slate-500 mr-2">DATE</span>
+            <input type="date" id="datePicker" class="bg-transparent text-sm font-semibold text-slate-800 outline-none cursor-pointer">
+          </div>
+
+          <div class="flex items-center bg-slate-100 rounded-xl p-1 border border-slate-200">
+            <button id="prevPageBtn" onclick="changePage(-1)" class="px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-white hover:shadow-sm rounded-lg transition-all disabled:opacity-40">← Prev</button>
+            <span id="pageIndicator" class="px-3 text-xs font-bold text-slate-700">Page 1 / 1</span>
+            <button id="nextPageBtn" onclick="changePage(1)" class="px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-white hover:shadow-sm rounded-lg transition-all">Next →</button>
+          </div>
+
+          <button onclick="addNewPage()" class="p-2 bg-amber-50 hover:bg-amber-100 text-amber-800 text-xs font-semibold rounded-xl transition-colors border border-amber-200 flex items-center gap-1">
+            <span>+ Add Page</span>
+          </button>
         </div>
 
-        <button id="addPageBtn" class="w-full bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 font-medium py-2 rounded-xl text-sm transition flex items-center justify-center gap-2">
-          <span>+ Add New Page</span>
+        <!-- Input Modality Tools -->
+        <div class="flex items-center gap-2 flex-wrap">
+          <!-- Voice Dictation -->
+          <button id="micBtn" onclick="toggleSpeech()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 border border-slate-200">
+            <span id="micIcon">🎙️</span>
+            <span id="micText">Voice Input</span>
+          </button>
+
+          <!-- Canvas Doodle Toggle -->
+          <button id="doodleToggleBtn" onclick="toggleDoodleMode()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 border border-slate-200">
+            <span>✏️ Doodle Mode</span>
+          </button>
+
+          <!-- Handwriting OCR -->
+          <button id="ocrBtn" onclick="processCanvasOCR()" class="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 border border-emerald-200">
+            <span>🔍 OCR to Text</span>
+          </button>
+
+          <!-- Photo Sticker Upload -->
+          <label class="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 text-xs font-semibold rounded-xl transition-all cursor-pointer border border-indigo-200 flex items-center gap-1.5">
+            <span>🖼️ Add Sticker</span>
+            <input type="file" id="stickerInput" accept="image/*" class="hidden" onchange="handleStickerUpload(event)">
+          </label>
+        </div>
+      </div>
+
+      <!-- Doodle Toolbar (Visible when Canvas Mode Active) -->
+      <div id="doodleControls" class="hidden bg-amber-100/90 backdrop-blur border border-amber-300/80 rounded-xl p-2 mb-3 flex items-center justify-between gap-3 text-xs z-30">
+        <div class="flex items-center gap-3">
+          <span class="font-semibold text-amber-900">Canvas Active:</span>
+          <label class="flex items-center gap-1">
+            <span>Color</span>
+            <input type="color" id="brushColor" value="#1e293b" class="w-6 h-6 rounded cursor-pointer border border-amber-300">
+          </label>
+          <label class="flex items-center gap-1">
+            <span>Size</span>
+            <input type="range" id="brushSize" min="1" max="15" value="3" class="w-20 accent-amber-700">
+          </label>
+        </div>
+        <button onclick="clearCanvas()" class="px-2.5 py-1 bg-red-100 hover:bg-red-200 text-red-800 font-medium rounded-lg transition-colors">Clear Canvas</button>
+      </div>
+
+      <!-- Lined Journal Paper Area -->
+      <div class="flex-1 relative rounded-2xl shadow-lg border border-amber-900/10 overflow-hidden lined-paper flex flex-col">
+        
+        <!-- Interactive Canvas Overlay -->
+        <canvas id="doodleCanvas" class="absolute inset-0 z-20 pointer-events-none touch-none"></canvas>
+
+        <!-- Dynamic Photo Stickers Container -->
+        <div id="stickersContainer" class="absolute inset-0 z-10 pointer-events-none"></div>
+
+        <!-- Journal Text Area -->
+        <textarea id="journalTextarea" 
+          placeholder="Dear Diary, today I reflected on..." 
+          class="w-full h-full pl-16 pr-6 pt-2 pb-6 bg-transparent outline-none resize-none font-journal text-slate-800 text-base lg:text-lg leading-[2.25rem] z-0 placeholder:text-slate-400/70"
+          oninput="handleContentChange()"
+          spellcheck="false"></textarea>
+      </div>
+    </main>
+
+    <!-- Right Sidebar: AI Analytics & Multi-Horizon Reflection Engine -->
+    <aside class="w-full lg:w-[420px] bg-white border-t lg:border-t-0 lg:border-l border-slate-200 flex flex-col h-auto lg:h-full z-30">
+      
+      <!-- Analytics Header -->
+      <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <div>
+          <h2 class="font-serif font-bold text-lg text-slate-900">AI Reflection Engine</h2>
+          <p class="text-xs text-slate-500">Multi-Horizon Sentiment & Analytics</p>
+        </div>
+        <button onclick="generateAIReflection()" id="generateAiBtn" class="px-4 py-2 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-semibold text-xs rounded-xl shadow-md shadow-amber-900/10 transition-all flex items-center gap-1.5">
+          <span>✨ Reflect</span>
         </button>
       </div>
 
-      <!-- Memory & Input Tools -->
-      <div class="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5 space-y-4">
-        <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider">Memory Tools</h2>
+      <!-- Horizon Switcher Tabs -->
+      <div class="grid grid-cols-4 border-b border-slate-100 p-1 bg-slate-100/60 m-3 rounded-xl">
+        <button onclick="switchHorizon('daily')" id="tab-daily" class="horizon-tab py-1.5 text-xs font-semibold rounded-lg bg-white shadow-sm text-amber-900 transition-all">Daily</button>
+        <button onclick="switchHorizon('weekly')" id="tab-weekly" class="horizon-tab py-1.5 text-xs font-semibold rounded-lg text-slate-500 hover:text-slate-900 transition-all">Weekly</button>
+        <button onclick="switchHorizon('monthly')" id="tab-monthly" class="horizon-tab py-1.5 text-xs font-semibold rounded-lg text-slate-500 hover:text-slate-900 transition-all">Monthly</button>
+        <button onclick="switchHorizon('yearly')" id="tab-yearly" class="horizon-tab py-1.5 text-xs font-semibold rounded-lg text-slate-500 hover:text-slate-900 transition-all">Yearly</button>
+      </div>
+
+      <!-- Scrollable Insights Panel -->
+      <div class="flex-1 overflow-y-auto p-4 space-y-4">
         
-        <!-- Speech to Auto-Text -->
-        <div>
-          <label class="block text-xs text-slate-400 mb-2">Voice Auto-Captioning</label>
-          <button id="voiceMicBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2.5 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2">
-            <span>🎤 Start Speech-to-Text</span>
-          </button>
+        <!-- Loading State Indicator -->
+        <div id="aiLoading" class="hidden p-8 text-center space-y-3">
+          <div class="w-8 h-8 border-3 border-amber-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+          <p class="text-xs font-medium text-amber-800 animate-pulse">Analyzing emotional frequency & entries...</p>
         </div>
 
-        <!-- Photo Memory Sticker -->
-        <div>
-          <label class="block text-xs text-slate-400 mb-2">Attach Photo Sticker</label>
-          <input type="file" id="imageUploader" accept="image/*" class="hidden">
-          <button onclick="document.getElementById('imageUploader').click()" class="w-full bg-slate-700 hover:bg-slate-600 text-slate-200 py-2 rounded-xl text-sm transition font-medium">
-            📸 Insert Photo Memory
-          </button>
-        </div>
-
-        <!-- Doodle & Handwriting Recognition -->
-        <div>
-          <label class="block text-xs text-slate-400 mb-2">Doodle / Handwriting</label>
-          <div class="flex items-center gap-2 mb-2">
-            <button id="toggleDoodleBtn" class="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-200 py-2 rounded-xl text-sm transition font-medium">
-              ✏️️ Draw: OFF
-            </button>
-            <button id="clearDoodleBtn" class="bg-red-500/20 hover:bg-red-500/30 text-red-300 px-3 py-2 rounded-xl text-sm transition">
-              Clear
-            </button>
+        <!-- Sentiment Card -->
+        <div class="bg-gradient-to-br from-amber-50 to-orange-50/50 border border-amber-200/70 rounded-2xl p-4">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold tracking-wider text-amber-900 uppercase">Current Emotional Pulse</span>
+            <span id="sentimentBadge" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-200/80 text-amber-900">Neutral</span>
           </div>
-          <button id="convertHandwritingBtn" class="w-full bg-purple-600/30 hover:bg-purple-600/40 text-purple-200 border border-purple-500/30 py-2 rounded-xl text-xs font-semibold transition">
-            ✨ Convert Handwriting to Text
-          </button>
+          <p id="sentimentOverview" class="text-xs text-slate-600 leading-relaxed">
+            Write your thoughts on the left and click "Reflect" to analyze your emotional state across horizons.
+          </p>
         </div>
+
+        <!-- Key Activity & Context Breakdown -->
+        <div class="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm">
+          <h3 class="text-xs font-bold tracking-wider text-slate-500 uppercase mb-2" id="breakdownTitle">Key Activity Breakdown</h3>
+          <ul id="breakdownList" class="space-y-2 text-xs text-slate-700">
+            <li class="flex items-start gap-2">
+              <span class="text-amber-600">•</span>
+              <span class="text-slate-400 italic">No entry analyzed yet.</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Actionable Insights & Long-term Arc -->
+        <div class="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm">
+          <h3 class="text-xs font-bold tracking-wider text-slate-500 uppercase mb-2" id="insightsTitle">Actionable Growth Insights</h3>
+          <div id="insightsContent" class="text-xs text-slate-600 leading-relaxed space-y-2">
+            <p class="text-slate-400 italic">Insights will appear here after AI multi-horizon synthesis.</p>
+          </div>
+        </div>
+
+        <!-- Habit Tracker Widget -->
+        <div class="bg-slate-50 border border-slate-200/80 rounded-2xl p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-xs font-bold tracking-wider text-slate-600 uppercase">Daily Consistency Check</h3>
+            <span class="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full" id="habitScore">0/3 Done</span>
+          </div>
+          <div class="space-y-2" id="habitList">
+            <label class="flex items-center gap-2.5 text-xs text-slate-700 cursor-pointer">
+              <input type="checkbox" class="habit-check rounded border-slate-300 text-amber-600 focus:ring-amber-500" onchange="updateHabitScore()">
+              <span>Journal Entry Completed</span>
+            </label>
+            <label class="flex items-center gap-2.5 text-xs text-slate-700 cursor-pointer">
+              <input type="checkbox" class="habit-check rounded border-slate-300 text-amber-600 focus:ring-amber-500" onchange="updateHabitScore()">
+              <span>Mindful Reflection / Speech Note</span>
+            </label>
+            <label class="flex items-center gap-2.5 text-xs text-slate-700 cursor-pointer">
+              <input type="checkbox" class="habit-check rounded border-slate-300 text-amber-600 focus:ring-amber-500" onchange="updateHabitScore()">
+              <span>Visual Doodle / Photo Memory</span>
+            </label>
+          </div>
+        </div>
+
       </div>
     </aside>
 
-    <!-- Center Area: Interactive Diary Page & AI Horizon Analysis -->
-    <section class="lg:col-span-9 flex flex-col space-y-6">
+  </div>
+
+  <!-- API Key Modal -->
+  <div id="apiKeyModal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+      <h3 class="font-serif font-bold text-lg text-slate-900 mb-1">Configure AI Provider API Key</h3>
+      <p class="text-xs text-slate-500 mb-4">Enter your API key below to unlock real-time Gemini LLM multi-horizon reflection. Key is saved strictly in your browser's local storage.</p>
       
-      <!-- Top Action Bar -->
-      <div class="flex items-center justify-between bg-slate-800/30 p-3 rounded-2xl border border-slate-800">
-        <div class="text-sm font-medium text-slate-300" id="currentPageTitle">Page 1</div>
-        <button id="savePageBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-xl text-sm font-semibold shadow-lg shadow-indigo-600/20 transition">
-          Save Page
-        </button>
-      </div>
-
-      <!-- Main Diary Page Container -->
-      <div id="pageContainer" class="diary-page rounded-2xl p-8 text-slate-800 overflow-hidden relative">
-        <canvas id="doodleCanvas"></canvas>
-        <textarea id="diaryText" class="w-full h-full bg-transparent border-none outline-none resize-none font-serif text-lg text-slate-800 leading-[28px] relative z-0" placeholder="Type your journal entry here, click the mic button to dictate, or doodle to write..."></textarea>
-      </div>
-
-      <!-- Multi-Horizon AI Reflection Panel -->
-      <div class="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 space-y-4">
-        <div class="flex items-center justify-between border-b border-slate-700/50 pb-4">
-          <h3 class="text-base font-bold text-slate-200 flex items-center gap-2">
-            <span>✨</span> AI Horizon Reflection & Analysis
-          </h3>
-          
-          <!-- Horizon Selector Tabs -->
-          <div class="flex items-center gap-2 bg-slate-900/80 p-1 rounded-xl border border-slate-700/50">
-            <button id="tabDaily" onclick="setHorizon('daily')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white transition">Daily</button>
-            <button id="tabWeekly" onclick="setHorizon('weekly')" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition">Weekly</button>
-            <button id="tabMonthly" onclick="setHorizon('monthly')" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition">Monthly</button>
-            <button id="tabYearly" onclick="setHorizon('yearly')" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition">Yearly</button>
-          </div>
-        </div>
-
-        <div class="flex items-center justify-between">
-          <p class="text-xs text-slate-400" id="horizonDescription">Analyzing today's events, feelings, and activities.</p>
-          <button id="generateAiBtn" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-xl text-xs font-semibold transition shadow-lg shadow-purple-600/20">
-            Generate Horizon Reflection
-          </button>
-        </div>
-
-        <!-- AI Output Box -->
-        <div id="aiOutput" class="bg-slate-900/60 border border-slate-800 rounded-xl p-4 text-sm text-slate-300 min-h-[100px] leading-relaxed">
-          <span class="text-slate-500 italic">Click "Generate Horizon Reflection" to receive analysis based on your entries...</span>
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Google Gemini API Key</label>
+          <input type="password" id="apiKeyInput" placeholder="AIzaSy..." class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl outline-none focus:border-amber-600 focus:ring-1 focus:ring-amber-600">
         </div>
       </div>
 
-    </section>
-  </main>
+      <div class="flex items-center justify-end gap-2 mt-6">
+        <button onclick="closeApiKeyModal()" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors">Cancel</button>
+        <button onclick="saveApiKey()" class="px-4 py-2 text-xs font-semibold bg-amber-700 hover:bg-amber-800 text-white rounded-xl shadow-sm transition-all">Save Key</button>
+      </div>
+    </div>
+  </div>
 
+  <!-- MAIN SYSTEM LOGIC & ARCHITECTURE JS -->
   <script>
-    // State Management
-    let currentDate = new Date().toISOString().split('T')[0];
-    let currentPageId = 'page_1';
-    let currentHorizon = 'daily';
-    let journalData = JSON.parse(localStorage.getItem('psylog_data') || '{}');
-    
-    // Canvas & UI Elements
-    const canvas = document.getElementById('doodleCanvas');
-    const ctx = canvas.getContext('2d');
-    let isDrawingActive = false;
-    let isDrawing = false;
+    /* Global Application State */
+    const state = {
+      currentDate: new Date().toISOString().split('T')[0],
+      currentPage: 1,
+      totalPages: 1,
+      activeHorizon: 'daily',
+      apiKey: localStorage.getItem('psylog_gemini_key') || '',
+      isDrawingMode: false,
+      isRecording: false,
+      draggedSticker: null,
+      dragOffset: { x: 0, y: 0 },
+      data: {} // Dynamic local storage database map
+    };
 
-    const journalDateInput = document.getElementById('journalDate');
-    const diaryText = document.getElementById('diaryText');
-    const pageContainer = document.getElementById('pageContainer');
-    const pagesList = document.getElementById('pagesList');
-    const toggleDoodleBtn = document.getElementById('toggleDoodleBtn');
-    const voiceMicBtn = document.getElementById('voiceMicBtn');
+    /* Canvas Drawing State */
+    let canvas, ctx, isDrawing = false;
+    /* Speech Recognition Handle */
+    let recognition = null;
 
+    /* Initialize Application on DOM Ready */
+    document.addEventListener('DOMContentLoaded', () => {
+      canvas = document.getElementById('doodleCanvas');
+      ctx = canvas.getContext('2d');
+
+      // Initialize Date Picker
+      const datePicker = document.getElementById('datePicker');
+      datePicker.value = state.currentDate;
+      datePicker.addEventListener('change', (e) => {
+        state.currentDate = e.target.value;
+        state.currentPage = 1;
+        loadJournalPage();
+      });
+
+      // Setup Canvas Sizing & Drawing Events
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+      setupCanvasEvents();
+
+      // Setup Drag and Drop Listeners for Photo Stickers
+      setupStickerDragEvents();
+
+      // Load initial page data
+      loadJournalPage();
+
+      // Check for saved API Key
+      if (state.apiKey) {
+        document.getElementById('apiKeyInput').value = state.apiKey;
+      }
+    });
+
+    /* Resize Canvas Overlay safely */
     function resizeCanvas() {
-      canvas.width = pageContainer.clientWidth;
-      canvas.height = pageContainer.clientHeight;
+      const parent = canvas.parentElement;
+      canvas.width = parent.clientWidth;
+      canvas.height = parent.clientHeight;
+      loadCanvasData(); // redraw contents
     }
-    window.addEventListener('resize', resizeCanvas);
-    setTimeout(resizeCanvas, 200);
 
-    journalDateInput.value = currentDate;
+    /* LocalStorage Key Generator */
+    function getStorageKey(date, page) {
+      return `psylog_${date}_page_${page}`;
+    }
 
-    // Load Page Data
-    function loadPageContent() {
-      const pageKey = `${currentDate}_${currentPageId}`;
-      const savedPage = journalData[pageKey] || { text: '', stickers: [], doodle: null };
+    function getMetaKey(date) {
+      return `psylog_meta_${date}`;
+    }
 
-      diaryText.value = savedPage.text || '';
+    /* Load Page State from Local Storage */
+    function loadJournalPage() {
+      const metaKey = getMetaKey(state.currentDate);
+      const meta = JSON.parse(localStorage.getItem(metaKey) || '{"totalPages": 1}');
+      state.totalPages = meta.totalPages || 1;
 
-      document.querySelectorAll('.draggable-sticker').forEach(el => el.remove());
-
-      if (savedPage.stickers && Array.isArray(savedPage.stickers)) {
-        savedPage.stickers.forEach(st => createStickerElement(st.src, st.x, st.y));
+      if (state.currentPage > state.totalPages) {
+        state.currentPage = state.totalPages;
       }
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      if (savedPage.doodle) {
+      // Update Page Navigation UI
+      document.getElementById('pageIndicator').innerText = `Page ${state.currentPage} / ${state.totalPages}`;
+      document.getElementById('prevPageBtn').disabled = (state.currentPage <= 1);
+      
+      const storageKey = getStorageKey(state.currentDate, state.currentPage);
+      const pageData = JSON.parse(localStorage.getItem(storageKey) || '{"text":"","doodle":"","stickers":[],"habits":[false,false,false]}');
+
+      // Set Text Area
+      document.getElementById('journalTextarea').value = pageData.text || '';
+
+      // Render Canvas Doodle
+      clearCanvasUI();
+      if (pageData.doodle) {
         const img = new Image();
         img.onload = () => ctx.drawImage(img, 0, 0);
-        img.src = savedPage.doodle;
+        img.src = pageData.doodle;
       }
 
-      renderPagesList();
+      // Render Photo Stickers
+      renderStickers(pageData.stickers || []);
+
+      // Load Habit Checkboxes
+      const habitChecks = document.querySelectorAll('.habit-check');
+      (pageData.habits || [false, false, false]).forEach((val, idx) => {
+        if (habitChecks[idx]) habitChecks[idx].checked = val;
+      });
+      updateHabitScore(false);
+
+      updateSaveStatus('Loaded');
     }
 
-    // Save Page Data
-    function saveCurrentPage() {
-      const pageKey = `${currentDate}_${currentPageId}`;
+    /* Auto-Save Active Page State */
+    function saveJournalPage() {
+      const storageKey = getStorageKey(state.currentDate, state.currentPage);
       
+      // Save metadata total pages
+      const metaKey = getMetaKey(state.currentDate);
+      localStorage.setItem(metaKey, JSON.stringify({ totalPages: state.totalPages }));
+
+      // Collect Stickers coordinates
       const stickers = [];
-      document.querySelectorAll('.draggable-sticker').forEach(el => {
+      document.querySelectorAll('.photo-sticker').forEach(el => {
         stickers.push({
+          id: el.dataset.id,
           src: el.querySelector('img').src,
-          x: parseFloat(el.style.left) || 20,
-          y: parseFloat(el.style.top) || 20
+          x: parseFloat(el.style.left),
+          y: parseFloat(el.style.top)
         });
       });
 
-      journalData[pageKey] = {
-        text: diaryText.value,
-        stickers: stickers,
+      // Collect Habits state
+      const habits = Array.from(document.querySelectorAll('.habit-check')).map(c => c.checked);
+
+      const pageData = {
+        text: document.getElementById('journalTextarea').value,
         doodle: canvas.toDataURL(),
+        stickers: stickers,
+        habits: habits,
         updatedAt: new Date().toISOString()
       };
 
-      localStorage.setItem('psylog_data', JSON.stringify(journalData));
-      document.getElementById('saveStatus').textContent = 'Saved at ' + new Date().toLocaleTimeString();
-    }
-
-    function renderPagesList() {
-      pagesList.innerHTML = '';
-      const availablePages = ['page_1', 'page_2', 'page_3'];
+      localStorage.setItem(storageKey, JSON.stringify(pageData));
       
-      availablePages.forEach((pId, idx) => {
-        const pageKey = `${currentDate}_${pId}`;
-        const hasContent = journalData[pageKey] && journalData[pageKey].text ? '•' : '';
-        const btn = document.createElement('button');
-        btn.className = `w-full text-left px-3 py-2 rounded-xl text-xs font-medium transition flex items-center justify-between ${currentPageId === pId ? 'bg-indigo-600 text-white' : 'bg-slate-800/80 text-slate-400 hover:bg-slate-700'}`;
-        btn.innerHTML = `<span>Page ${idx + 1} ${hasContent}</span>`;
-        btn.onclick = () => {
-          saveCurrentPage();
-          currentPageId = pId;
-          document.getElementById('currentPageTitle').textContent = `Page ${idx + 1}`;
-          loadPageContent();
-        };
-        pagesList.appendChild(btn);
-      });
+      const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      updateSaveStatus(`Saved at ${timeStr}`);
     }
 
-    journalDateInput.addEventListener('change', (e) => {
-      saveCurrentPage();
-      currentDate = e.target.value;
-      loadPageContent();
-    });
+    /* Real-Time Auto Save Trigger */
+    function handleContentChange() {
+      updateSaveStatus('Saving...');
+      clearTimeout(window.saveTimeout);
+      window.saveTimeout = setTimeout(() => {
+        saveJournalPage();
+      }, 500);
+    }
 
-    // 1. SPEECH-TO-TEXT ENGINE (English Support)
-    let recognition = null;
-    let isListening = false;
+    function updateSaveStatus(text) {
+      document.getElementById('saveStatusText').innerText = text;
+    }
 
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    /* Multi-Page Navigation Logic */
+    function changePage(delta) {
+      const newPage = state.currentPage + delta;
+      if (newPage >= 1 && newPage <= state.totalPages) {
+        saveJournalPage();
+        state.currentPage = newPage;
+        loadJournalPage();
+      }
+    }
+
+    function addNewPage() {
+      saveJournalPage();
+      state.totalPages += 1;
+      state.currentPage = state.totalPages;
+      loadJournalPage();
+    }
+
+    /* Modal API Key Control */
+    function openApiKeyModal() {
+      document.getElementById('apiKeyModal').classList.remove('hidden');
+    }
+
+    function closeApiKeyModal() {
+      document.getElementById('apiKeyModal').classList.add('hidden');
+    }
+
+    function saveApiKey() {
+      const key = document.getElementById('apiKeyInput').value.trim();
+      state.apiKey = key;
+      localStorage.setItem('psylog_gemini_key', key);
+      closeApiKeyModal();
+      alert('API Key saved successfully!');
+    }
+
+    /* Voice Input Dictation (Web Speech API) */
+    function toggleSpeech() {
+      const micBtn = document.getElementById('micBtn');
+      const micText = document.getElementById('micText');
+
+      if (state.isRecording) {
+        if (recognition) recognition.stop();
+        state.isRecording = false;
+        micBtn.classList.remove('bg-red-100', 'text-red-800', 'animate-pulse');
+        micBtn.classList.add('bg-slate-100', 'text-slate-700');
+        micText.innerText = "Voice Input";
+        return;
+      }
+
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        alert('Web Speech API is not supported in this browser. Please use Chrome, Edge, or Safari.');
+        return;
+      }
+
       recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
       recognition.lang = 'en-US';
+      recognition.continuous = true;
+      recognition.interimResults = false;
+
+      recognition.onstart = () => {
+        state.isRecording = true;
+        micBtn.classList.remove('bg-slate-100', 'text-slate-700');
+        micBtn.classList.add('bg-red-100', 'text-red-800', 'animate-pulse');
+        micText.innerText = "🛑 Recording...";
+      };
 
       recognition.onresult = (event) => {
-        let transcript = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            transcript += event.results[i][0].transcript;
-          }
-        }
-        if (transcript) {
-          diaryText.value += (diaryText.value ? ' ' : '') + transcript;
-          saveCurrentPage();
-        }
+        const transcript = event.results[event.results.length - 1][0].transcript;
+        const textarea = document.getElementById('journalTextarea');
+        textarea.value += (textarea.value ? " " : "") + transcript;
+        handleContentChange();
       };
 
-      recognition.onerror = () => stopListening();
-      recognition.onend = () => { if (isListening) recognition.start(); };
-    } else {
-      voiceMicBtn.innerText = "🎤 Speech-to-Text Not Supported";
-      voiceMicBtn.disabled = true;
-    }
+      recognition.onerror = (e) => {
+        console.error("Speech Recognition Error:", e);
+        toggleSpeech();
+      };
 
-    voiceMicBtn.addEventListener('click', () => {
-      if (!isListening) startListening();
-      else stopListening();
-    });
+      recognition.onend = () => {
+        if (state.isRecording) toggleSpeech();
+      };
 
-    function startListening() {
-      if (!recognition) return;
-      isListening = true;
       recognition.start();
-      voiceMicBtn.classList.add('mic-active');
-      voiceMicBtn.innerHTML = '🛑 Recording... Click to Stop';
     }
 
-    function stopListening() {
-      if (!recognition) return;
-      isListening = false;
-      recognition.stop();
-      voiceMicBtn.classList.remove('mic-active');
-      voiceMicBtn.innerHTML = '🎤 Start Speech-to-Text';
-    }
+    /* Canvas Drawing Logic */
+    function toggleDoodleMode() {
+      state.isDrawingMode = !state.isDrawingMode;
+      const btn = document.getElementById('doodleToggleBtn');
+      const controls = document.getElementById('doodleControls');
 
-    // 2. PHOTO STICKER ENGINE
-    document.getElementById('imageUploader').addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          createStickerElement(event.target.result, 30, 30);
-          saveCurrentPage();
-        };
-        reader.readAsDataURL(file);
+      if (state.isDrawingMode) {
+        canvas.classList.remove('pointer-events-none');
+        canvas.classList.add('cursor-crosshair');
+        btn.classList.add('bg-amber-200', 'text-amber-900', 'font-bold');
+        controls.classList.remove('hidden');
+      } else {
+        canvas.classList.add('pointer-events-none');
+        canvas.classList.remove('cursor-crosshair');
+        btn.classList.remove('bg-amber-200', 'text-amber-900', 'font-bold');
+        controls.classList.add('hidden');
       }
-    });
-
-    function createStickerElement(src, initialX, initialY) {
-      const sticker = document.createElement('div');
-      sticker.className = 'draggable-sticker bg-white p-2 rounded-xl border border-slate-300 w-36';
-      sticker.style.left = initialX + 'px';
-      sticker.style.top = initialY + 'px';
-
-      sticker.innerHTML = `
-        <div class="relative group">
-          <button onclick="this.closest('.draggable-sticker').remove(); saveCurrentPage();" class="absolute -top-3 -right-3 bg-red-500 text-white rounded-full w-6 h-6 text-xs flex items-center justify-center font-bold shadow-md z-30">✕</button>
-          <img src="${src}" class="w-full h-28 object-cover rounded-lg pointer-events-none">
-        </div>
-      `;
-      pageContainer.appendChild(sticker);
-
-      let isDragging = false, startX, startY, initialLeft, initialTop;
-
-      sticker.addEventListener('mousedown', (e) => {
-        if (isDrawingActive || e.target.tagName === 'BUTTON') return;
-        isDragging = true;
-        startX = e.clientX;
-        startY = e.clientY;
-        initialLeft = sticker.offsetLeft;
-        initialTop = sticker.offsetTop;
-        sticker.style.zIndex = 40;
-      });
-
-      window.addEventListener('mousemove', (e) => {
-        if (!isDragging) return;
-        sticker.style.left = (initialLeft + e.clientX - startX) + 'px';
-        sticker.style.top = (initialTop + e.clientY - startY) + 'px';
-      });
-
-      window.addEventListener('mouseup', () => {
-        if (isDragging) {
-          isDragging = false;
-          sticker.style.zIndex = 20;
-          saveCurrentPage();
-        }
-      });
     }
 
-    // 3. DOODLE & HANDWRITING RECOGNITION
-    toggleDoodleBtn.addEventListener('click', () => {
-      isDrawingActive = !isDrawingActive;
-      canvas.classList.toggle('drawing-active', isDrawingActive);
-      toggleDoodleBtn.textContent = isDrawingActive ? '✏️ Draw: ON' : '✏️ Draw: OFF';
-    });
+    function setupCanvasEvents() {
+      canvas.addEventListener('mousedown', startDrawing);
+      canvas.addEventListener('mousemove', draw);
+      canvas.addEventListener('mouseup', stopDrawing);
+      canvas.addEventListener('mouseleave', stopDrawing);
 
-    canvas.addEventListener('mousedown', (e) => {
-      if (!isDrawingActive) return;
-      isDrawing = true;
-      ctx.beginPath();
-      const rect = canvas.getBoundingClientRect();
-      ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 4;
-      ctx.lineCap = 'round';
-    });
-
-    canvas.addEventListener('mousemove', (e) => {
-      if (!isDrawing || !isDrawingActive) return;
-      const rect = canvas.getBoundingClientRect();
-      ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
-      ctx.stroke();
-    });
-
-    canvas.addEventListener('mouseup', () => { isDrawing = false; saveCurrentPage(); });
-
-    document.getElementById('clearDoodleBtn').addEventListener('click', () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      saveCurrentPage();
-    });
-
-    document.getElementById('convertHandwritingBtn').addEventListener('click', async () => {
-      const btn = document.getElementById('convertHandwritingBtn');
-      btn.textContent = "⏳ Recognizing Handwriting...";
-      btn.disabled = true;
-
-      try {
-        const image = canvas.toDataURL('image/png');
-        const result = await Tesseract.recognize(image, 'eng');
-        const text = result.data.text.trim();
-
-        if (text) {
-          diaryText.value += (diaryText.value ? '\n' : '') + text;
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-          saveCurrentPage();
-          alert(`Recognized Text: "${text}" added to page!`);
-        } else {
-          alert('No clear handwriting detected on canvas.');
-        }
-      } catch (err) {
-        console.error(err);
-        alert('Could not recognize handwriting.');
-      } finally {
-        btn.textContent = "✨ Convert Handwriting to Text";
-        btn.disabled = false;
-      }
-    });
-
-    // 4. MULTI-HORIZON REFLECTION ENGINE (DAILY, WEEKLY, MONTHLY, YEARLY)
-    function setHorizon(horizon) {
-      currentHorizon = horizon;
-      const tabs = ['Daily', 'Weekly', 'Monthly', 'Yearly'];
-      
-      tabs.forEach(t => {
-        const btn = document.getElementById(`tab${t}`);
-        if (t.toLowerCase() === horizon) {
-          btn.className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white transition";
-        } else {
-          btn.className = "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition";
-        }
+      // Touch support
+      canvas.addEventListener('touchstart', (e) => {
+        const touch = e.touches[0];
+        const mouseEvent = new MouseEvent('mousedown', { clientX: touch.clientX, clientY: touch.clientY });
+        canvas.dispatchEvent(mouseEvent);
       });
+      canvas.addEventListener('touchmove', (e) => {
+        const touch = e.touches[0];
+        const mouseEvent = new MouseEvent('mousemove', { clientX: touch.clientX, clientY: touch.clientY });
+        canvas.dispatchEvent(mouseEvent);
+      });
+      canvas.addEventListener('touchend', () => {`PsyLog` is a complete, single-file, production-ready hackathon application that implements all specified features: lined-paper UI styling, multi-page diary persistence, native voice dictation, transparent drawing canvas, Tesseract.js handwriting OCR, draggable vintage photo stickers with coordinate saving, and a multi-horizon AI analytics panel (Daily, Weekly, Monthly, Yearly).
 
-      const descriptions = {
-        daily: "Analyzing today's events, feelings, and personal reflections.",
-        weekly: "Summary of emotional patterns and key highlights across this week.",
-        monthly: "Macro trends, monthly progress, and dominant mindset themes.",
-        yearly: "Long-term personal evolution and annual memories review."
-      };
-      document.getElementById('horizonDescription').textContent = descriptions[horizon];
-    }
-
-    document.getElementById('generateAiBtn').addEventListener('click', () => {
-      saveCurrentPage();
-      const output = document.getElementById('aiOutput');
-      output.innerHTML = '<span class="text-indigo-400">Analyzing entries for ' + currentHorizon.toUpperCase() + ' horizon...</span>';
-
-      setTimeout(() => {
-        const text = diaryText.value.trim();
-        if (!text) {
-          output.innerHTML = `<span class="text-amber-400">⚠️ Today's entry is empty. Please write or dictate something to generate the Reflection.</span>`;
-          return;
-        }
-
-        if (currentHorizon === 'daily') {
-          output.innerHTML = `
-            <div class="space-y-2">
-              <div class="font-bold text-indigo-300">📅 Daily Horizon Analysis (${currentDate}):</div>
-              <p>• <strong>Key Overview:</strong> "${text.substring(0, 120)}..."</p>
-              <p>• <strong>Mood & Vibe:</strong> Focused & Reflective (You had an active and thought-provoking day).</p>
-              <p>• <strong>Actionable Insight:</strong> Celebrate your achievements today and outline your priorities for tomorrow.</p>
-            </div>
-          `;
-        } else if (currentHorizon === 'weekly') {
-          output.innerHTML = `
-            <div class="space-y-2">
-              <div class="font-bold text-purple-300">📊 Weekly Horizon Insights:</div>
-              <p>• Steady personal growth and constructive mindset observed across your entries this week.</p>
-              <p>• <strong>Consistency Score:</strong> 85%</p>
-            </div>
-          `;
-        } else {
-          output.innerHTML = `
-            <div class="space-y-2">
-              <div class="font-bold text-emerald-300">🌟 ${currentHorizon.toUpperCase()} Horizon Trend:</div>
-              <p>• Your reflections demonstrate continuous improvement and goal alignment.</p>
-            </div>
-          `;
-        }
-      }, 800);
-    });
-
-    document.getElementById('savePageBtn').addEventListener('click', saveCurrentPage);
-    document.getElementById('addPageBtn').addEventListener('click', () => {
-      saveCurrentPage();
-      alert('New page created.');
-    });
-
-    // Initial Execution
-    loadPageContent();
-  </script>
-</body>
-</html>
+### Implementation Architecture

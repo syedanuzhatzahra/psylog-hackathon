@@ -5,8 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PsyLog - Multi-Horizon Memory Journal</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Tesseract.js for Handwriting / Doodle OCR Recognition -->
+  <!-- Tesseract.js for Handwriting OCR -->
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <!-- JSZip for Exporting Archive Folder ZIP -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <style>
     /* Digital Diary Page Texture */
     .diary-page {
@@ -60,7 +62,12 @@
       <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center font-bold text-white shadow-lg shadow-indigo-500/30">Ψ</div>
       <h1 class="text-xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">PsyLog</h1>
     </div>
-    <div id="saveStatus" class="text-xs text-slate-400 font-medium">Auto-saved</div>
+    <div class="flex items-center gap-4">
+      <button id="exportArchiveBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shadow-lg shadow-emerald-600/20">
+        <span>📦 Export Memory Archive (ZIP)</span>
+      </button>
+      <div id="saveStatus" class="text-xs text-slate-400 font-medium">Auto-saved</div>
+    </div>
   </header>
 
   <!-- Main Container -->
@@ -108,7 +115,7 @@
           <label class="block text-xs text-slate-400 mb-2">Doodle / Handwriting</label>
           <div class="flex items-center gap-2 mb-2">
             <button id="toggleDoodleBtn" class="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-200 py-2 rounded-xl text-sm transition font-medium">
-              ✏️️ Draw: OFF
+              ✏ Draw: OFF
             </button>
             <button id="clearDoodleBtn" class="bg-red-500/20 hover:bg-red-500/30 text-red-300 px-3 py-2 rounded-xl text-sm transition">
               Clear
@@ -121,7 +128,7 @@
       </div>
     </aside>
 
-    <!-- Center Area: Interactive Diary Page & AI Horizon Analysis -->
+    <!-- Center Area: Interactive Diary Page, AI Reflection & Memory Vault -->
     <section class="lg:col-span-9 flex flex-col space-y-6">
       
       <!-- Top Action Bar -->
@@ -135,7 +142,7 @@
       <!-- Main Diary Page Container -->
       <div id="pageContainer" class="diary-page rounded-2xl p-8 text-slate-800 overflow-hidden relative">
         <canvas id="doodleCanvas"></canvas>
-        <textarea id="diaryText" class="w-full h-full bg-transparent border-none outline-none resize-none font-serif text-lg text-slate-800 leading-[28px] relative z-0" placeholder="Type your journal entry here, click the mic button to dictate, or doodle to write..."></textarea>
+        <textarea id="diaryText" class="w-full h-full bg-transparent border-none outline-none resize-none font-serif text-lg text-slate-800 leading-[28px] relative z-0" placeholder="Type your journal entry here (English, Roman Urdu, etc.), click the mic button to dictate, or doodle to write..."></textarea>
       </div>
 
       <!-- Multi-Horizon AI Reflection Panel -->
@@ -164,6 +171,18 @@
         <!-- AI Output Box -->
         <div id="aiOutput" class="bg-slate-900/60 border border-slate-800 rounded-xl p-4 text-sm text-slate-300 min-h-[100px] leading-relaxed">
           <span class="text-slate-500 italic">Click "Generate Horizon Reflection" to receive analysis based on your entries...</span>
+        </div>
+      </div>
+
+      <!-- Memory Vault Section -->
+      <div class="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 space-y-4">
+        <h3 class="text-base font-bold text-slate-200 flex items-center gap-2 border-b border-slate-700/50 pb-4">
+          <span>📁</span> Memory Vault (Previous Pages Archive)
+        </h3>
+        <p class="text-xs text-slate-400">Click on any date card below to restore and review your past journal entries:</p>
+        
+        <div id="memoryVaultGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+          <!-- Dynamic Memory Cards -->
         </div>
       </div>
 
@@ -199,7 +218,7 @@
 
     journalDateInput.value = currentDate;
 
-    // Load Page Data
+    // Load Page Content
     function loadPageContent() {
       const pageKey = `${currentDate}_${currentPageId}`;
       const savedPage = journalData[pageKey] || { text: '', stickers: [], doodle: null };
@@ -220,6 +239,7 @@
       }
 
       renderPagesList();
+      renderMemoryVault();
     }
 
     // Save Page Data
@@ -244,6 +264,7 @@
 
       localStorage.setItem('psylog_data', JSON.stringify(journalData));
       document.getElementById('saveStatus').textContent = 'Saved at ' + new Date().toLocaleTimeString();
+      renderMemoryVault();
     }
 
     function renderPagesList() {
@@ -266,13 +287,57 @@
       });
     }
 
+    // Render Memory Vault
+    function renderMemoryVault() {
+      const vaultGrid = document.getElementById('memoryVaultGrid');
+      vaultGrid.innerHTML = '';
+
+      const keys = Object.keys(journalData).filter(k => journalData[k].text || (journalData[k].stickers && journalData[k].stickers.length > 0));
+
+      if (keys.length === 0) {
+        vaultGrid.innerHTML = `<p class="col-span-full text-xs text-slate-500 italic">No saved pages found. Write something and save to populate your vault!</p>`;
+        return;
+      }
+
+      keys.forEach(key => {
+        const [dateStr, pageId] = key.split('_');
+        const entry = journalData[key];
+        
+        const card = document.createElement('div');
+        card.className = "bg-slate-900 border border-slate-700/80 rounded-xl p-3 flex flex-col justify-between hover:border-indigo-500 cursor-pointer transition shadow-md group";
+        card.onclick = () => {
+          currentDate = dateStr;
+          currentPageId = pageId;
+          journalDateInput.value = dateStr;
+          document.getElementById('currentPageTitle').textContent = `Page ${pageId.replace('page_', '')}`;
+          loadPageContent();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-bold text-indigo-400">📅 ${dateStr}</span>
+              <span class="text-[10px] bg-indigo-900/60 text-indigo-300 px-1.5 py-0.5 rounded">${pageId.replace('page_', 'Page ')}</span>
+            </div>
+            <p class="text-xs text-slate-300 line-clamp-3 font-serif">${entry.text || '(Media attached)'}</p>
+          </div>
+          <div class="mt-3 pt-2 border-t border-slate-800 flex items-center justify-between text-[10px] text-slate-500">
+            <span>Read Entry</span>
+            <span class="group-hover:translate-x-1 transition-transform">➔</span>
+          </div>
+        `;
+        vaultGrid.appendChild(card);
+      });
+    }
+
     journalDateInput.addEventListener('change', (e) => {
       saveCurrentPage();
       currentDate = e.target.value;
       loadPageContent();
     });
 
-    // 1. SPEECH-TO-TEXT ENGINE (English Support)
+    // 1. SPEECH-TO-TEXT ENGINE
     let recognition = null;
     let isListening = false;
 
@@ -437,7 +502,7 @@
       }
     });
 
-    // 4. MULTI-HORIZON REFLECTION ENGINE (DAILY, WEEKLY, MONTHLY, YEARLY)
+    // 4. MULTI-HORIZON REFLECTION ENGINE
     function setHorizon(horizon) {
       currentHorizon = horizon;
       const tabs = ['Daily', 'Weekly', 'Monthly', 'Yearly'];
@@ -498,6 +563,31 @@
           `;
         }
       }, 800);
+    });
+
+    // 5. ZIP EXPORT FEATURE
+    document.getElementById('exportArchiveBtn').addEventListener('click', async () => {
+      saveCurrentPage();
+      const zip = new JSZip();
+      const folder = zip.folder("PsyLog_Memory_Archive");
+
+      const keys = Object.keys(journalData);
+      if (keys.length === 0) {
+        alert("No diary entries found to export!");
+        return;
+      }
+
+      keys.forEach(key => {
+        const data = journalData[key];
+        const content = `PsyLog Entry Date: ${key}\nUpdated: ${data.updatedAt}\n\n--- Journal Text ---\n${data.text || '(No Text Written)'}\n`;
+        folder.file(`${key}.txt`, content);
+      });
+
+      const blob = await zip.generateAsync({ type: "blob" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `PsyLog_Memories_${new Date().toISOString().split('T')[0]}.zip`;
+      link.click();
     });
 
     document.getElementById('savePageBtn').addEventListener('click', saveCurrentPage);

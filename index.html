@@ -1,44 +1,361 @@
 <!DOCTYPE html>
-<html lang="ur" dir="rtl">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PsyLog - Daily Diary Booklet</title>
-    <!-- Tailwind CSS Styling के लिए -->
-    <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PsyLog - Multi-Page Booklet Journal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js for Mood & Energy Analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Tesseract.js for Handwriting OCR -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <style>
+    .diary-page {
+      background: #fffdf9;
+      background-image: linear-gradient(#e5e7eb 1px, transparent 1px);
+      background-size: 100% 28px;
+      line-height: 28px;
+      position: relative;
+      min-height: 520px;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+    }
+    .draggable-sticker {
+      position: absolute;
+      cursor: move;
+      user-select: none;
+      z-index: 20;
+      touch-action: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    #doodleCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+      pointer-events: none;
+    }
+    #doodleCanvas.drawing-active {
+      pointer-events: auto;
+      cursor: crosshair;
+    }
+    .mic-active {
+      animation: pulse 1.5s infinite;
+      background-color: #ef4444 !important;
+    }
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+  </style>
 </head>
-<body class="bg-amber-50 min-p-4 flex items-center justify-center min-h-screen">
+<body class="bg-slate-900 text-slate-100 min-h-screen font-sans flex flex-col">
 
-    <div class="w-full max-w-2xl bg-white p-6 rounded-2xl shadow-lg border border-amber-200">
-        <!-- Header -->
-        <div class="flex justify-between items-center border-b pb-4 mb-4">
-            <h1 class="text-2xl font-bold text-gray-800">📖 میری ڈائری (بکلیٹ)</h1>
-            <span id="date-display" class="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm font-semibold"></span>
-        </div>
-
-        <!-- Booklet Container -->
-        <div id="booklet-container">
-            <!-- Page Info / Counter -->
-            <div class="flex justify-between items-center mb-3">
-                <span id="page-counter" class="text-sm font-bold text-amber-900">صفحہ 1 از 1</span>
-                <button id="add-page-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded-lg shadow transition">+ نیا صفحہ جوڑیں</button>
-            </div>
-
-            <!-- Page Writing Area / Content Display -->
-            <textarea id="page-content-input" class="w-full h-64 p-4 border border-amber-200 rounded-lg shadow-inner text-gray-700 font-serif text-lg leading-relaxed focus:outline-none focus:ring-2 focus:ring-amber-500" placeholder="آج کے دن کے بارے میں یہاں لکھیے..."></textarea>
-        </div>
-
-        <!-- Navigation Controls (Next / Previous) -->
-        <div class="flex justify-between items-center mt-6 pt-4 border-t">
-            <button id="prev-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition disabled:opacity-40">← پچھلا صفحہ</button>
-            
-            <button id="save-page-btn" class="px-6 py-2 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg shadow transition">تبدیلیاں محفوظ کریں</button>
-            
-            <button id="next-btn" class="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition disabled:opacity-40">اگلا صفحہ →</button>
-        </div>
+  <!-- Header -->
+  <header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center space-x-3">
+      <div class="w-9 h-9 bg-indigo-600 rounded-xl flex items-center justify-center font-bold text-white shadow-lg shadow-indigo-500/30">Ψ</div>
+      <h1 class="text-xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">PsyLog</h1>
     </div>
+    <div class="flex items-center gap-4">
+      <button id="resetAppBtn" class="bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/30 px-3 py-1.5 rounded-xl text-xs font-semibold transition">
+        🗑️ Reset Local Data
+      </button>
+      <div id="saveStatus" class="text-xs text-slate-400 font-medium">Auto-saved</div>
+    </div>
+  </header>
 
-    <!-- JavaScript Link -->
-    <script src="reflect.js"></script>
-</body>
-</html>
+  <!-- Main Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
+    
+    <!-- Left Sidebar: Date & Multi-Page Booklet Navigation -->
+    <aside class="lg:col-span-3 space-y-6">
+      <div class="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5">
+        <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Booklet Date</h2>
+        <input type="date" id="journalDate" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-indigo-500 text-white mb-4">
+        
+        <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Pages in this Booklet</h3>
+        <div id="pagesList" class="space-y-2 max-h-48 overflow-y-auto mb-4">
+          <!-- Dynamic Multi-Pages Render -->
+        </div>
+
+        <button id="addPageBtn" class="w-full bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 font-medium py-2 rounded-xl text-sm transition flex items-center justify-center gap-2">
+          <span>+ Add Booklet Page</span>
+        </button>
+      </div>
+
+      <!-- Mood & Energy Check-in -->
+      <div class="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5 space-y-4">
+        <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider">Today's Check-in</h2>
+        <div>
+          <div class="flex justify-between text-xs mb-1">
+            <span class="text-slate-300">Mood Level:</span>
+            <span id="moodVal" class="font-bold text-indigo-400">7 / 10</span>
+          </div>
+          <input type="range" id="moodSlider" min="1" max="10" value="7" class="w-full accent-indigo-500 cursor-pointer">
+        </div>
+        <div>
+          <div class="flex justify-between text-xs mb-1">
+            <span class="text-slate-300">Energy Level:</span>
+            <span id="energyVal" class="font-bold text-purple-400">6 / 10</span>
+          </div>
+          <input type="range" id="energySlider" min="1" max="10" value="6" class="w-full accent-purple-500 cursor-pointer">
+        </div>
+      </div>
+
+      <!-- Memory Tools -->
+      <div class="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-5 space-y-4">
+        <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider">Page Tools</h2>
+        
+        <div>
+          <label class="block text-xs text-slate-400 mb-2">Voice Dictation</label>
+          <button id="voiceMicBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2.5 rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2">
+            <span>🎤 Start Speech-to-Text</span>
+          </button>
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-400 mb-2">Photo Sticker</label>
+          <input type="file" id="imageUploader" accept="image/*" class="hidden">
+          <button onclick="document.getElementById('imageUploader').click()" class="w-full bg-slate-700 hover:bg-slate-600 text-slate-200 py-2 rounded-xl text-sm transition font-medium">
+            📸 Insert Photo Memory
+          </button>
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-400 mb-2">Doodle & Handwriting</label>
+          <div class="flex items-center gap-2 mb-2">
+            <button id="toggleDoodleBtn" class="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-200 py-2 rounded-xl text-sm transition font-medium">
+              ✏ Draw: OFF
+            </button>
+            <button id="clearDoodleBtn" class="bg-red-500/20 hover:bg-red-500/30 text-red-300 px-3 py-2 rounded-xl text-sm transition">
+              Clear
+            </button>
+          </div>
+          <button id="convertHandwritingBtn" class="w-full bg-purple-600/30 hover:bg-purple-600/40 text-purple-200 border border-purple-500/30 py-2 rounded-xl text-xs font-semibold transition">
+            ✨ Convert Handwriting to Text
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Center & Right Area: Active Page & Archive -->
+    <section class="lg:col-span-9 flex flex-col space-y-6">
+      
+      <!-- Top Action Bar -->
+      <div class="flex items-center justify-between bg-slate-800/30 p-3 rounded-2xl border border-slate-800">
+        <div class="text-sm font-medium text-slate-300" id="currentPageTitle">Page 1</div>
+        <button id="savePageBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2 rounded-xl text-sm font-semibold shadow-lg shadow-indigo-600/20 transition">
+          Save Current Page
+        </button>
+      </div>
+
+      <!-- Main Diary Page Container -->
+      <div id="pageContainer" class="diary-page rounded-2xl p-8 text-slate-800 overflow-hidden relative">
+        <canvas id="doodleCanvas"></canvas>
+        <textarea id="diaryText" class="w-full h-full bg-transparent border-none outline-none resize-none font-serif text-lg text-slate-800 leading-[28px] relative z-0" placeholder="Write your journal story here... (You can add multiple pages for today)"></textarea>
+      </div>
+
+      <!-- Analytics Dashboard -->
+      <div class="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 space-y-6">
+        <div class="flex items-center justify-between border-b border-slate-700/50 pb-4">
+          <h3 class="text-base font-bold text-slate-200 flex items-center gap-2">
+            <span>📊</span> Psychological Analytics & Trends
+          </h3>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800">
+            <h4 class="text-xs font-bold text-slate-300 mb-3">Mood & Energy Trend</h4>
+            <div class="h-48 relative"><canvas id="moodTrendChart"></canvas></div>
+          </div>
+          <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800">
+            <h4 class="text-xs font-bold text-slate-300 mb-3">Emotional Triggers</h4>
+            <div class="h-48 relative flex items-center justify-center"><canvas id="triggerChart"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Horizon Reflection -->
+      <div class="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-700/50 pb-4">
+          <h3 class="text-base font-bold text-slate-200 flex items-center gap-2">
+            <span>✨</span> AI Horizon Reflection & Analysis
+          </h3>
+          <div class="flex items-center gap-2 bg-slate-900/80 p-1 rounded-xl border border-slate-700/50">
+            <button id="tabDaily" onclick="setHorizon('daily')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white transition">Daily</button>
+            <button id="tabWeekly" onclick="setHorizon('weekly')" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition">Weekly</button>
+            <button id="tabMonthly" onclick="setHorizon('monthly')" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition">Monthly</button>
+            <button id="tabYearly" onclick="setHorizon('yearly')" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition">Yearly</button>
+          </div>
+        </div>
+        <div class="flex items-center justify-between">
+          <p class="text-xs text-slate-400" id="horizonDescription">Analyzing today's multi-page booklet reflections.</p>
+          <button id="generateAiBtn" class="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2 rounded-xl text-xs font-semibold transition shadow-lg shadow-purple-600/20">
+            Generate Horizon Reflection
+          </button>
+        </div>
+        <div id="aiOutput" class="bg-slate-900/60 border border-slate-800 rounded-xl p-4 text-sm text-slate-300 min-h-[100px] leading-relaxed">
+          <span class="text-slate-500 italic">Click "Generate Horizon Reflection" to analyze your diary pages...</span>
+        </div>
+      </div>
+
+      <!-- Memory Vault Booklet Archive -->
+      <div class="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 space-y-4">
+        <h3 class="text-base font-bold text-slate-200 flex items-center gap-2 border-b border-slate-700/50 pb-4">
+          <span>📁</span> Memory Vault (Booklet Archive)
+        </h3>
+        <div id="memoryVaultGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <!-- Dynamic Booklet Archive Cards -->
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <script>
+    // State Management
+    let currentDate = new Date().toISOString().split('T')[0];
+    let currentPageNum = 1;
+    let currentHorizon = 'daily';
+    let journalData = JSON.parse(localStorage.getItem('psylog_data') || '{}');
+    
+    const canvas = document.getElementById('doodleCanvas');
+    const ctx = canvas.getContext('2d');
+    let isDrawingActive = false, isDrawing = false;
+
+    const journalDateInput = document.getElementById('journalDate');
+    const diaryText = document.getElementById('diaryText');
+    const pageContainer = document.getElementById('pageContainer');
+    const pagesList = document.getElementById('pagesList');
+    const toggleDoodleBtn = document.getElementById('toggleDoodleBtn');
+    const voiceMicBtn = document.getElementById('voiceMicBtn');
+
+    let moodChartInstance = null, triggerChartInstance = null;
+
+    function resizeCanvas() {
+      canvas.width = pageContainer.clientWidth;
+      canvas.height = pageContainer.clientHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    setTimeout(resizeCanvas, 200);
+
+    journalDateInput.value = currentDate;
+
+    document.getElementById('resetAppBtn').addEventListener('click', () => {
+      if (confirm("Clear all local journal data and start fresh?")) {
+        localStorage.removeItem('psylog_data');
+        journalData = {};
+        currentPageNum = 1;
+        loadPageContent();
+        alert('App reset successfully!');
+      }
+    });
+
+    document.getElementById('moodSlider').addEventListener('input', (e) => {
+      document.getElementById('moodVal').textContent = `${e.target.value} / 10`;
+    });
+    document.getElementById('energySlider').addEventListener('input', (e) => {
+      document.getElementById('energyVal').textContent = `${e.target.value} / 10`;
+    });
+
+    // Load Specific Date & Page
+    function loadPageContent() {
+      const pageKey = `${currentDate}_page_${currentPageNum}`;
+      const savedPage = journalData[pageKey] || { text: '', stickers: [], doodle: null, mood: 7, energy: 6 };
+
+      diaryText.value = savedPage.text || '';
+      document.getElementById('moodSlider').value = savedPage.mood || 7;
+      document.getElementById('moodVal').textContent = `${savedPage.mood || 7} / 10`;
+      document.getElementById('energySlider').value = savedPage.energy || 6;
+      document.getElementById('energyVal').textContent = `${savedPage.energy || 6} / 10`;
+
+      document.querySelectorAll('.draggable-sticker').forEach(el => el.remove());
+      if (savedPage.stickers && Array.isArray(savedPage.stickers)) {
+        savedPage.stickers.forEach(st => createStickerElement(st.src, st.x, st.y));
+      }
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (savedPage.doodle) {
+        const img = new Image();
+        img.onload = () => ctx.drawImage(img, 0, 0);
+        img.src = savedPage.doodle;
+      }
+
+      renderPagesList();
+      renderMemoryVault();
+      updateCharts();
+    }
+
+    // Save Current Page
+    function saveCurrentPage() {
+      const pageKey = `${currentDate}_page_${currentPageNum}`;
+      
+      const stickers = [];
+      document.querySelectorAll('.draggable-sticker').forEach(el => {
+        stickers.push({
+          src: el.querySelector('img').src,
+          x: parseFloat(el.style.left) || 20,
+          y: parseFloat(el.style.top) || 20
+        });
+      });
+
+      journalData[pageKey] = {
+        text: diaryText.value,
+        stickers: stickers,
+        doodle: canvas.toDataURL(),
+        mood: parseInt(document.getElementById('moodSlider').value),
+        energy: parseInt(document.getElementById('energySlider').value),
+        updatedAt: new Date().toISOString()
+      };
+
+      localStorage.setItem('psylog_data', JSON.stringify(journalData));
+      document.getElementById('saveStatus').textContent = 'Saved at ' + new Date().toLocaleTimeString();
+      renderPagesList();
+      renderMemoryVault();
+      updateCharts();
+    }
+
+    // Render Multi-Pages buttons for current date booklet
+    function renderPagesList() {
+      pagesList.innerHTML = '';
+      
+      // Find all page numbers that exist for currentDate in journalData
+      let maxPage = 1;
+      Object.keys(journalData).forEach(k => {
+        if (k.startsWith(currentDate + '_page_')) {
+          const pNum = parseInt(k.split('_page_')[1]);
+          if (pNum > maxPage) maxPage = pNum;
+        }
+      });
+
+      for (let i = 1; i <= maxPage; i++) {
+        const pKey = `${currentDate}_page_${i}`;
+        const hasContent = journalData[pKey] && journalData[pKey].text ? '•' : '';
+        const btn = document.createElement('button');
+        btn.className = `w-full text-left px-3 py-2 rounded-xl text-xs font-medium transition flex items-center justify-between ${currentPageNum === i ? 'bg-indigo-600 text-white' : 'bg-slate-800/80 text-slate-400 hover:bg-slate-700'}`;
+        btn.innerHTML = `<span>Page ${i} ${hasContent}</span>`;
+        btn.onclick = () => {
+          saveCurrentPage();
+          currentPageNum = i;
+          document.getElementById('currentPageTitle').textContent = `Page ${i}`;
+          loadPageContent();
+        };
+        pagesList.appendChild(btn);
+      }
+    }
+
+    document.getElementById('addPageBtn').addEventListener('click', () => {
+      saveCurrentPage();
+      
+      // Determine next new page number
+      let maxPage = 0;
+      Object.keys(journalData).forEach(k => {
+        if (k.startsWith(currentDate + '_page_')) {
+          const pNum = parseInt(k.split('_page_')[1]);
+          if (pNum > maxPage) maxPage = pNum;
+        }
+      });
+      
+      currentPageNum = maxPage

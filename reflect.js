@@ -1,32 +1,36 @@
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+document.getElementById('generateAiBtn').addEventListener('click', async () => {
+  saveCurrentPage();
+  const output = document.getElementById('aiOutput');
+  output.innerHTML = '<span class="text-indigo-400">✨ Generating AI Horizon Reflection... Please wait...</span>';
 
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({ error: 'GEMINI_API_KEY Environment Variable missing on server.' });
+  const text = diaryText.value.trim();
+  if (!text) {
+    output.innerHTML = `<span class="text-amber-400">⚠️ Today's entry is empty. Please write or dictate something to generate the reflection.</span>`;
+    return;
   }
-
-  const { prompt } = req.body;
 
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }]
-        })
-      }
-    );
+    const response = await fetch('/api/reflect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: `Analyze the following journal entry for the ${currentHorizon} horizon and provide a thoughtful psychological and emotional reflection in English:\n\n"${text}"`
+      })
+    });
 
     const data = await response.json();
-    const generatedText = data?.candidates?.[0]?.content?.parts?.[0]?.text || "Unable to generate insights at this moment.";
-
-    return res.status(200).json({ text: generatedText });
-  } catch (error) {
-    return res.status(500).json({ error: 'Failed to query Gemini API', details: error.message });
+    if (response.ok) {
+      output.innerHTML = `
+        <div class="space-y-2">
+          <div class="font-bold text-indigo-300 capitalize">🌟 ${currentHorizon} Horizon AI Analysis:</div>
+          <p class="whitespace-pre-line text-slate-200">${data.text}</p>
+        </div>
+      `;
+    } else {
+      output.innerHTML = `<span class="text-red-400">Error: ${data.error || 'Failed to generate insight'}</span>`;
+    }
+  } catch (err) {
+    console.error(err);
+    output.innerHTML = `<span class="text-red-400">Network error while connecting to AI reflection service.</span>`;
   }
-}
+});

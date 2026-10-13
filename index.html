@@ -65,8 +65,11 @@
       <h1 class="text-xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">PsyLog</h1>
     </div>
     <div class="flex items-center gap-4">
+      <button id="resetAppBtn" class="bg-red-600/20 hover:bg-red-600/30 text-red-300 border border-red-500/30 px-3 py-1.5 rounded-xl text-xs font-semibold transition">
+        🗑️ Reset Local Data
+      </button>
       <button id="exportArchiveBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shadow-lg shadow-emerald-600/20">
-        <span>📦 Export Memory Archive (ZIP)</span>
+        <span>📦 Export Archive (ZIP)</span>
       </button>
       <div id="saveStatus" class="text-xs text-slate-400 font-medium">Auto-saved</div>
     </div>
@@ -165,7 +168,7 @@
       <!-- Main Diary Page Container -->
       <div id="pageContainer" class="diary-page rounded-2xl p-8 text-slate-800 overflow-hidden relative">
         <canvas id="doodleCanvas"></canvas>
-        <textarea id="diaryText" class="w-full h-full bg-transparent border-none outline-none resize-none font-serif text-lg text-slate-800 leading-[28px] relative z-0" placeholder="Type your journal entry here (English, Roman Urdu, etc.), dictating, or doodle..."></textarea>
+        <textarea id="diaryText" class="w-full h-full bg-transparent border-none outline-none resize-none font-serif text-lg text-slate-800 leading-[28px] relative z-0" placeholder="Type your journal entry here, dictate, or doodle..."></textarea>
       </div>
 
       <!-- VISUAL ANALYTICAL DASHBOARD (GRAPHS SECTION) -->
@@ -177,10 +180,7 @@
           <span class="text-xs text-indigo-400 bg-indigo-950 px-2.5 py-1 rounded-full border border-indigo-800">Live Visual Insights</span>
         </div>
 
-        <!-- Grid for Graphs -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          
-          <!-- Graph 1: Line Chart (Mood Highs & Low Dips over Time) -->
           <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800 flex flex-col justify-between">
             <h4 class="text-xs font-bold text-slate-300 mb-3 flex items-center justify-between">
               <span>Mood Peak & Low Points (7-Day Trend)</span>
@@ -191,7 +191,6 @@
             </div>
           </div>
 
-          <!-- Graph 2: Doughnut Chart (Emotional Triggers Breakdown) -->
           <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800 flex flex-col justify-between">
             <h4 class="text-xs font-bold text-slate-300 mb-3 flex items-center justify-between">
               <span>Primary Emotional Triggers</span>
@@ -201,10 +200,8 @@
               <canvas id="triggerChart"></canvas>
             </div>
           </div>
-
         </div>
 
-        <!-- Graph 3: Radar Chart (Full Wellness Balance) -->
         <div class="bg-slate-900/80 p-4 rounded-xl border border-slate-800">
           <h4 class="text-xs font-bold text-slate-300 mb-3">Holistic Wellness Radar (360° Balance)</h4>
           <div class="h-56 relative flex items-center justify-center">
@@ -212,12 +209,11 @@
           </div>
         </div>
 
-        <!-- Peak & Low Summary Insights Banner -->
         <div id="analyticsSummary" class="bg-indigo-950/40 border border-indigo-800/40 p-4 rounded-xl text-xs text-slate-300 flex items-start gap-3">
           <span class="text-lg">💡</span>
           <div>
             <strong class="text-indigo-300">Psychological Insight:</strong>
-            <p id="summaryText" class="mt-1">Your mood peak was recorded at 8/10 on high productivity days, while energy dips occurred during late-night writing. Maintain a regular sleep schedule to level out low points.</p>
+            <p id="summaryText" class="mt-1">Your mood peak was recorded at 8/10 on high productivity days, while energy dips occurred during late-night writing.</p>
           </div>
         </div>
       </div>
@@ -282,7 +278,6 @@
     const toggleDoodleBtn = document.getElementById('toggleDoodleBtn');
     const voiceMicBtn = document.getElementById('voiceMicBtn');
 
-    // Chart Instances
     let moodChartInstance = null;
     let triggerChartInstance = null;
     let radarChartInstance = null;
@@ -296,7 +291,17 @@
 
     journalDateInput.value = currentDate;
 
-    // Range Sliders Event
+    // Reset / Clear LocalStorage Data Button
+    document.getElementById('resetAppBtn').addEventListener('click', () => {
+      if (confirm("Are you sure you want to clear all local test data and start fresh?")) {
+        localStorage.removeItem('psylog_data');
+        journalData = {};
+        diaryText.value = '';
+        loadPageContent();
+        alert('Local data cleared successfully! Your app is now completely clean for new users.');
+      }
+    });
+
     document.getElementById('moodSlider').addEventListener('input', (e) => {
       document.getElementById('moodVal').textContent = `${e.target.value} / 10`;
     });
@@ -304,7 +309,6 @@
       document.getElementById('energyVal').textContent = `${e.target.value} / 10`;
     });
 
-    // Load Page
     function loadPageContent() {
       const pageKey = `${currentDate}_${currentPageId}`;
       const savedPage = journalData[pageKey] || { text: '', stickers: [], doodle: null, mood: 7, energy: 6 };
@@ -333,7 +337,6 @@
       updateCharts();
     }
 
-    // Save Page Data & Refresh Analytics
     function saveCurrentPage() {
       const pageKey = `${currentDate}_${currentPageId}`;
       
@@ -381,7 +384,6 @@
       });
     }
 
-    // Render Memory Vault
     function renderMemoryVault() {
       const vaultGrid = document.getElementById('memoryVaultGrid');
       vaultGrid.innerHTML = '';
@@ -389,7 +391,7 @@
       const keys = Object.keys(journalData).filter(k => journalData[k].text || (journalData[k].stickers && journalData[k].stickers.length > 0));
 
       if (keys.length === 0) {
-        vaultGrid.innerHTML = `<p class="col-span-full text-xs text-slate-500 italic">No saved pages found.</p>`;
+        vaultGrid.innerHTML = `<p class="col-span-full text-xs text-slate-500 italic">No saved pages found yet.</p>`;
         return;
       }
 
@@ -425,9 +427,7 @@
       });
     }
 
-    // CHART VISUALIZATION LOGIC
     function updateCharts() {
-      // Collect dates and values for the last 7 entries
       const keys = Object.keys(journalData).sort();
       const labels = [];
       const moodValues = [];
@@ -439,14 +439,12 @@
         energyValues.push(journalData[k].energy || 6);
       });
 
-      // Default mock baseline if empty
       if (labels.length === 0) {
         labels.push('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun');
         moodValues.push(6, 7, 5, 8, 9, 6, 8);
         energyValues.push(5, 6, 4, 7, 8, 7, 7);
       }
 
-      // 1. Mood & Energy Line Chart
       const ctxLine = document.getElementById('moodTrendChart').getContext('2d');
       if (moodChartInstance) moodChartInstance.destroy();
 
@@ -488,7 +486,6 @@
         }
       });
 
-      // 2. Emotional Triggers Doughnut Chart
       const ctxDonut = document.getElementById('triggerChart').getContext('2d');
       if (triggerChartInstance) triggerChartInstance.destroy();
 
@@ -509,7 +506,6 @@
         }
       });
 
-      // 3. Wellness Radar Chart
       const ctxRadar = document.getElementById('wellnessRadarChart').getContext('2d');
       if (radarChartInstance) radarChartInstance.destroy();
 
@@ -539,11 +535,6 @@
           plugins: { legend: { display: false } }
         }
       });
-
-      // Dynamic Insight Text Calculation
-      const maxMood = Math.max(...moodValues);
-      const minMood = Math.min(...moodValues);
-      document.getElementById('summaryText').textContent = `Your peak recorded mood was ${maxMood}/10 and lowest dip was ${minMood}/10 over recent entries. Emotional triggers show Work and Personal Goals drive most of your high energy peaks.`;
     }
 
     journalDateInput.addEventListener('change', (e) => {
@@ -717,99 +708,7 @@
       }
     });
 
-    // MULTI-HORIZON REFLECTION ENGINE
-    function setHorizon(horizon) {
-      currentHorizon = horizon;
-      const tabs = ['Daily', 'Weekly', 'Monthly', 'Yearly'];
-      
-      tabs.forEach(t => {
-        const btn = document.getElementById(`tab${t}`);
-        if (t.toLowerCase() === horizon) {
-          btn.className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white transition";
-        } else {
-          btn.className = "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition";
-        }
-      });
-
-      const descriptions = {
-        daily: "Analyzing today's events, feelings, and personal reflections.",
-        weekly: "Summary of emotional patterns and key highlights across this week.",
-        monthly: "Macro trends, monthly progress, and dominant mindset themes.",
-        yearly: "Long-term personal evolution and annual memories review."
-      };
-      document.getElementById('horizonDescription').textContent = descriptions[horizon];
-    }
-
-    document.getElementById('generateAiBtn').addEventListener('click', () => {
-      saveCurrentPage();
-      const output = document.getElementById('aiOutput');
-      output.innerHTML = '<span class="text-indigo-400">Analyzing entries for ' + currentHorizon.toUpperCase() + ' horizon...</span>';
-
-      setTimeout(() => {
-        const text = diaryText.value.trim();
-        if (!text) {
-          output.innerHTML = `<span class="text-amber-400">⚠️ Today's entry is empty. Please write or dictate something to generate the Reflection.</span>`;
-          return;
-        }
-
-        if (currentHorizon === 'daily') {
-          output.innerHTML = `
-            <div class="space-y-2">
-              <div class="font-bold text-indigo-300">📅 Daily Horizon Analysis (${currentDate}):</div>
-              <p>• <strong>Key Overview:</strong> "${text.substring(0, 120)}..."</p>
-              <p>• <strong>Mood & Vibe:</strong> Focused & Reflective (You had an active and thought-provoking day).</p>
-              <p>• <strong>Actionable Insight:</strong> Celebrate your achievements today and outline your priorities for tomorrow.</p>
-            </div>
-          `;
-        } else if (currentHorizon === 'weekly') {
-          output.innerHTML = `
-            <div class="space-y-2">
-              <div class="font-bold text-purple-300">📊 Weekly Horizon Insights:</div>
-              <p>• Steady personal growth and constructive mindset observed across your entries this week.</p>
-              <p>• <strong>Consistency Score:</strong> 85%</p>
-            </div>
-          `;
-        } else {
-          output.innerHTML = `
-            <div class="space-y-2">
-              <div class="font-bold text-emerald-300">🌟 ${currentHorizon.toUpperCase()} Horizon Trend:</div>
-              <p>• Your reflections demonstrate continuous improvement and goal alignment.</p>
-            </div>
-          `;
-        }
-      }, 800);
-    });
-
-    // ZIP EXPORT FEATURE
-    document.getElementById('exportArchiveBtn').addEventListener('click', async () => {
-      saveCurrentPage();
-      const zip = new JSZip();
-      const folder = zip.folder("PsyLog_Memory_Archive");
-
-      const keys = Object.keys(journalData);
-      if (keys.length === 0) {
-        alert("No diary entries found to export!");
-        return;
-      }
-
-      keys.forEach(key => {
-        const data = journalData[key];
-        const content = `PsyLog Entry Date: ${key}\nUpdated: ${data.updatedAt}\nMood: ${data.mood}/10 | Energy: ${data.energy}/10\n\n--- Journal Text ---\n${data.text || '(No Text Written)'}\n`;
-        folder.file(`${key}.txt`, content);
-      });
-
-      const blob = await zip.generateAsync({ type: "blob" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = `PsyLog_Memories_${new Date().toISOString().split('T')[0]}.zip`;
-      link.click();
-    });
-
     document.getElementById('savePageBtn').addEventListener('click', saveCurrentPage);
-    document.getElementById('addPageBtn').addEventListener('click', () => {
-      saveCurrentPage();
-      alert('New page created.');
-    });
 
     // Initial Execution
     loadPageContent();

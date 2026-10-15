@@ -2,7 +2,7 @@ let currentDate = new Date().toISOString().split('T')[0];
 let currentPageNum = 1;
 let currentHorizon = 'daily';
 let journalData = JSON.parse(localStorage.getItem('psylog_data') || '{}');
-
+ 
 const canvas = document.getElementById('doodleCanvas');
 const ctx = canvas.getContext('2d');
 let isDrawingActive = false, isDrawing = false;
@@ -193,7 +193,7 @@ function renderMemoryVault() {
       </div>
       <div class="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between">
         <span class="text-xs text-indigo-400 font-medium group-hover:underline">Open Book View ➔</span>
-        <span class="text-[10px] text-slate-500">Mood: ${pages[0].data.mood || 7}/10</span>
+        <span class="text-[10px] text-slate-500">Pages: ${pages.length}</span>
       </div>
     `;
 
@@ -205,7 +205,7 @@ function renderMemoryVault() {
   });
 }
 
-// Book Reader Modal Logic
+// Book Reader Modal Logic (Fixed to properly show all compiled pages)
 function openBookModal(dateStr, pages) {
   activeBookDate = dateStr;
   activeBookPages = pages;
@@ -216,20 +216,24 @@ function openBookModal(dateStr, pages) {
 }
 
 function renderBookModalPage() {
+  if (!activeBookPages || activeBookPages.length === 0) return;
   const currentP = activeBookPages[activeBookIndex];
-  document.getElementById('modalBookSubtitle').textContent = `Page ${currentP.pageNum} of ${activeBookPages.length} (Mood: ${currentP.data.mood}/10)`;
+  
+  document.getElementById('modalBookSubtitle').textContent = `Page ${currentP.pageNum} of ${activeBookPages.length} (Mood: ${currentP.data.mood || 7}/10)`;
   document.getElementById('bookPageIndicator').textContent = `Page ${activeBookIndex + 1} / ${activeBookPages.length}`;
   
-  document.getElementById('modalPageText').textContent = currentP.data.text || '(No text on this page)';
-  
+  document.getElementById('modalPageTextener') || (document.getElementById('modalPageText').textContent = currentP.data.text || '(No text on this page)');
+
+  // Render stickers inside modal view
   const stickersArea = document.getElementById('modalStickersArea');
   stickersArea.innerHTML = '';
-  if (currentP.data.stickers) {
+  if (currentP.data.stickers && Array.isArray(currentP.data.stickers)) {
     currentP.data.stickers.forEach(st => {
       stickersArea.innerHTML += `<div class="bg-white p-1 rounded border shadow inline-block"><img src="${st.src}" class="w-24 h-20 object-cover rounded"></div>`;
     });
   }
 
+  // Render doodles inside modal canvas
   const mCanvas = document.getElementById('modalCanvas');
   const mCtx = mCanvas.getContext('2d');
   mCanvas.width = mCanvas.parentElement.clientWidth - 80;
@@ -241,11 +245,15 @@ function renderBookModalPage() {
     dImg.src = currentP.data.doodle;
   }
 
-  document.getElementById('prevBookPageBtn').disabled = activeBookIndex === 0;
-  document.getElementById('prevBookPageBtn').style.opacity = activeBookIndex === 0 ? '0.5' : '1';
+  // Toggle buttons visibility/opacity
+  const prevBtn = document.getElementById('prevBookPageBtn');
+  const nextBtn = document.getElementById('nextBookPageBtn');
   
-  document.getElementById('nextBookPageBtn').disabled = activeBookIndex === activeBookPages.length - 1;
-  document.getElementById('nextBookPageBtn').style.opacity = activeBookIndex === activeBookPages.length - 1 ? '0.5' : '1';
+  prevBtn.disabled = activeBookIndex === 0;
+  prevBtn.style.opacity = activeBookIndex === 0 ? '0.5' : '1';
+  
+  nextBtn.disabled = activeBookIndex === activeBookPages.length - 1;
+  nextBtn.style.opacity = activeBookIndex === activeBookPages.length - 1 ? '0.5' : '1';
 }
 
 function flipBookPage(direction) {
@@ -417,4 +425,76 @@ document.getElementById('convertHandwritingBtn').addEventListener('click', async
   btn.disabled = true;
   try {
     const image = canvas.toDataURL('image/png');
-    const result
+    const result = await Tesseract.recognize(image, 'eng');
+    const text = result.data.text.trim();
+    if (text) {
+      diaryText.value += (diaryText.value ? '\n' : '') + text;
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      saveCurrentPage();
+      alert(`Recognized: "${text}" added!`);
+    } else {
+      alert('No handwriting detected.');
+    }
+  } catch (err) {
+    alert('OCR failed.');
+  } finally {
+    btn.textContent = "✨ Convert Handwriting to Text";
+    btn.disabled = false;
+  }
+});
+
+document.getElementById('savePageBtn').addEventListener('click', saveCurrentPage);
+
+// AI Horizon Reflection
+function setHorizon(horizon) {
+  currentHorizon = horizon;
+  ['Daily', 'Weekly', 'Monthly', 'Yearly'].forEach(t => {
+    const btn = document.getElementById(`tab${t}`);
+    if (t.toLowerCase() === horizon) btn.className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600 text-white transition";
+    else btn.className = "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition";
+  });
+  const desc = {
+    daily: "Analyzing today's multi-page booklet.",
+    weekly: "Synthesizing the past 7 days of reflections, moods, and energy trends.",
+    monthly: "Detecting deeper emotional themes across this month's journal entries.",
+    yearly: "Long-term psychological horizon review and milestone progression."
+  };
+  document.getElementById('horizonDescription').textContent = desc[horizon];
+}
+
+document.getElementById('generateAiBtn').addEventListener('click', async () => {
+  saveCurrentPage();
+  const output = document.getElementById('aiOutput');
+  output.innerHTML = '<span class="text-indigo-400">✨ Analyzing today’s entire book with AI...</span>';
+
+  let bookletText = "";
+  Object.keys(journalData).forEach(k => {
+    if (k.startsWith(currentDate + '_page_')) {
+      bookletText += `\n--- Page ---\n` + (journalData[k].text || '');
+    }
+  });
+
+  if (!bookletText.trim()) {
+    output.innerHTML = `<span class="text-amber-400">⚠️ No pages found for this date. Write something first!</span>`;
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/reflect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: `Analyze this multi-page diary booklet for ${currentDate} (${currentHorizon} horizon) and provide psychological insights in English:\n\n${bookletText}` })
+    });
+    const data = await response.json();
+    if (response.ok) {
+      output.innerHTML = `<div class="space-y-2"><div class="font-bold text-indigo-300 capitalize">🌟 ${currentHorizon} Book Analysis:</div><p class="whitespace-pre-line text-slate-200">${data.text}</p></div>`;
+    } else {
+      output.innerHTML = `<span class="text-red-400">Error: ${data.error || 'Failed'}</span>`;
+    }
+  } catch (err) {
+    output.innerHTML = `<span class="text-red-400">Connection error with AI server.</span>`;
+  }
+});
+
+// Initial Load
+loadPageContent();

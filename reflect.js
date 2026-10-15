@@ -1,7 +1,7 @@
-let currentDate = new Date().toISOString().split('T')[0];
+let currentSessionId = new Date().toISOString().split('T')[0]; // Default to today's date
 let currentPageNum = 1;
 let currentHorizon = 'daily';
-let journalData = JSON.parse(localStorage.getItem('psylog_data') || '{}');
+let journalData = JSON.parse(localStorage.getItem('psylog_sessions') || '{}');
  
 const canvas = document.getElementById('doodleCanvas');
 const ctx = canvas.getContext('2d');
@@ -18,7 +18,6 @@ let moodChartInstance = null, triggerChartInstance = null;
 
 let activeBookPages = [];
 let activeBookIndex = 0;
-let activeBookDate = '';
 
 function resizeCanvas() {
   canvas.width = pageContainer.clientWidth;
@@ -27,13 +26,30 @@ function resizeCanvas() {
 window.addEventListener('resize', resizeCanvas);
 setTimeout(resizeCanvas, 200);
 
-journalDateInput.value = currentDate;
+// Initialize or get default session
+if (!journalData[currentSessionId]) {
+  journalData[currentSessionId] = {
+    title: "Today's Reflection",
+    pages: {
+      1: { text: '', stickers: [], doodle: null, mood: 7, energy: 6 }
+    }
+  };
+}
+
+journalDateInput.value = currentSessionId;
 
 document.getElementById('resetAppBtn').addEventListener('click', () => {
   if (confirm("Clear all local journal data and start fresh?")) {
-    localStorage.removeItem('psylog_data');
+    localStorage.removeItem('psylog_sessions');
     journalData = {};
+    currentSessionId = new Date().toISOString().split('T')[0];
     currentPageNum = 1;
+    
+    journalData[currentSessionId] = {
+      title: "Today's Reflection",
+      pages: { 1: { text: '', stickers: [], doodle: null, mood: 7, energy: 6 } }
+    };
+    
     loadPageContent();
     alert('App reset successfully!');
   }
@@ -47,8 +63,16 @@ document.getElementById('energySlider').addEventListener('input', (e) => {
 });
 
 function loadPageContent() {
-  const pageKey = `${currentDate}_page_${currentPageNum}`;
-  const savedPage = journalData[pageKey] || { text: '', stickers: [], doodle: null, mood: 7, energy: 6 };
+  if (!journalData[currentSessionId]) {
+    journalData[currentSessionId] = { title: "Diary Session", pages: { 1: { text: '', stickers: [], doodle: null, mood: 7, energy: 6 } } };
+  }
+
+  const session = journalData[currentSessionId];
+  if (!session.pages[currentPageNum]) {
+    session.pages[currentPageNum] = { text: '', stickers: [], doodle: null, mood: 7, energy: 6 };
+  }
+
+  const savedPage = session.pages[currentPageNum];
 
   diaryText.value = savedPage.text || '';
   document.getElementById('moodSlider').value = savedPage.mood || 7;
@@ -68,13 +92,18 @@ function loadPageContent() {
     img.src = savedPage.doodle;
   }
 
+  document.getElementById('currentPageTitle').textContent = `${session.title || 'Diary'} - Page ${currentPageNum}`;
   renderPagesList();
   renderMemoryVault();
   updateCharts();
 }
 
 function saveCurrentPage() {
-  const pageKey = `${currentDate}_page_${currentPageNum}`;
+  if (!journalData[currentSessionId]) {
+    journalData[currentSessionId] = { title: "Diary Session", pages: {} };
+  }
+
+  const session = journalData[currentSessionId];
   
   const stickers = [];
   document.querySelectorAll('.draggable-sticker').forEach(el => {
@@ -85,7 +114,13 @@ function saveCurrentPage() {
     });
   });
 
-  journalData[pageKey] = {
+  // Auto-generate title from first line of text if default
+  if (diaryText.value.trim() && (session.title === "Today's Reflection" || session.title === "Diary Session")) {
+    const firstLine = diaryText.value.trim().split('\n')[0];
+    session.title = firstLine.length > 25 ? firstLine.substring(0, 25) + '...' : firstLine;
+  }
+
+  session.pages[currentPageNum] = {
     text: diaryText.value,
     stickers: stickers,
     doodle: canvas.toDataURL(),
@@ -94,7 +129,7 @@ function saveCurrentPage() {
     updatedAt: new Date().toISOString()
   };
 
-  localStorage.setItem('psylog_data', JSON.stringify(journalData));
+  localStorage.setItem('psylog_sessions', JSON.stringify(journalData));
   document.getElementById('saveStatus').textContent = 'Saved at ' + new Date().toLocaleTimeString();
   renderPagesList();
   renderMemoryVault();
@@ -103,114 +138,107 @@ function saveCurrentPage() {
 
 function renderPagesList() {
   pagesList.innerHTML = '';
-  let maxPage = 1;
-  Object.keys(journalData).forEach(k => {
-    if (k.startsWith(currentDate + '_page_')) {
-      const pNum = parseInt(k.split('_page_')[1]);
-      if (pNum > maxPage) maxPage = pNum;
-    }
-  });
+  const session = journalData[currentSessionId];
+  if (!session || !session.pages) return;
 
-  for (let i = 1; i <= maxPage; i++) {
-    const pKey = `${currentDate}_page_${i}`;
-    const hasContent = journalData[pKey] && journalData[pKey].text ? '•' : '';
+  const pageNums = Object.keys(session.pages).map(Number).sort((a,b) => a - b);
+
+  pageNums.forEach(i => {
+    const hasContent = session.pages[i] && session.pages[i].text ? '•' : '';
     const btn = document.createElement('button');
     btn.className = `w-full text-left px-3 py-2 rounded-xl text-xs font-medium transition flex items-center justify-between ${currentPageNum === i ? 'bg-indigo-600 text-white' : 'bg-slate-800/80 text-slate-400 hover:bg-slate-700'}`;
     btn.innerHTML = `<span>Page ${i} ${hasContent}</span>`;
     btn.onclick = () => {
       saveCurrentPage();
       currentPageNum = i;
-      document.getElementById('currentPageTitle').textContent = `Page ${i}`;
       loadPageContent();
     };
     pagesList.appendChild(btn);
-  }
+  });
 }
 
 document.getElementById('addPageBtn').addEventListener('click', () => {
   saveCurrentPage();
-  let maxPage = 0;
-  Object.keys(journalData).forEach(k => {
-    if (k.startsWith(currentDate + '_page_')) {
-      const pNum = parseInt(k.split('_page_')[1]);
-      if (pNum > maxPage) maxPage = pNum;
-    }
-  });
+  const session = journalData[currentSessionId];
+  const pageNums = Object.keys(session.pages).map(Number);
+  const maxPage = pageNums.length > 0 ? Math.max(...pageNums) : 0;
+  
   currentPageNum = maxPage + 1;
-  document.getElementById('currentPageTitle').textContent = `Page ${currentPageNum}`;
-  diaryText.value = '';
-  document.querySelectorAll('.draggable-sticker').forEach(el => el.remove());
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  session.pages[currentPageNum] = { text: '', stickers: [], doodle: null, mood: 7, energy: 6 };
+  
   saveCurrentPage();
-  renderPagesList();
+  loadPageContent();
 });
 
 journalDateInput.addEventListener('change', (e) => {
   saveCurrentPage();
-  currentDate = e.target.value;
+  const newDate = e.target.value;
+  currentSessionId = newDate;
   currentPageNum = 1;
-  document.getElementById('currentPageTitle').textContent = `Page 1`;
+
+  if (!journalData[currentSessionId]) {
+    journalData[currentSessionId] = {
+      title: `Session (${newDate})`,
+      pages: { 1: { text: '', stickers: [], doodle: null, mood: 7, energy: 6 } }
+    };
+  }
   loadPageContent();
 });
 
-// Render Memory Vault Strictly as Unified Date Folders
+// Render Memory Vault (Like Sidebar History / Date Folders)
 function renderMemoryVault() {
   const vaultGrid = document.getElementById('memoryVaultGrid');
   vaultGrid.innerHTML = '';
 
-  const dateBooklets = {};
-  Object.keys(journalData).forEach(k => {
-    const parts = k.split('_page_');
-    if (parts.length === 2) {
-      const dateStr = parts[0];
-      const pageNum = parseInt(parts[1]);
-      if (!dateBooklets[dateStr]) dateBooklets[dateStr] = [];
-      dateBooklets[dateStr].push({ pageNum: pageNum, key: k, data: journalData[k] });
-    }
-  });
+  const sessionIds = Object.keys(journalData).sort().reverse();
 
-  const dates = Object.keys(dateBooklets).sort().reverse();
-
-  if (dates.length === 0) {
-    vaultGrid.innerHTML = `<p class="col-span-full text-xs text-slate-500 italic">No date folders found yet.</p>`;
+  if (sessionIds.length === 0) {
+    vaultGrid.innerHTML = `<p class="col-span-full text-xs text-slate-500 italic">No diary sessions found yet.</p>`;
     return;
   }
 
-  dates.forEach(dateStr => {
-    const pages = dateBooklets[dateStr].sort((a,b) => a.pageNum - b.pageNum);
-    const card = document.createElement('div');
-    card.className = "bg-slate-900 border border-slate-700/80 rounded-xl p-4 flex flex-col justify-between hover:border-indigo-500 transition shadow-md cursor-pointer group";
-    
-    let previewText = pages[0].data.text ? pages[0].data.text.substring(0, 70) + '...' : '(Media attached)';
+  sessionIds.forEach(dateStr => {
+    const session = journalData[dateStr];
+    const pageKeys = Object.keys(session.pages || {});
+    const firstPage = session.pages[pageKeys[0]] || {};
+    const previewText = firstPage.text ? firstPage.text.substring(0, 60) + '...' : '(No text on first page)';
 
+    const card = document.createElement('div');
+    card.className = `bg-slate-900 border ${currentSessionId === dateStr ? 'border-indigo-500 ring-1 ring-indigo-500' : 'border-slate-700/80'} rounded-xl p-4 flex flex-col justify-between hover:border-indigo-400 transition shadow-md cursor-pointer group`;
+    
     card.innerHTML = `
       <div>
         <div class="flex items-center justify-between mb-2">
-          <span class="text-xs font-bold text-indigo-400">📁 Date Folder: ${dateStr}</span>
-          <span class="text-[10px] bg-indigo-950 text-indigo-300 px-2 py-0.5 rounded-full border border-indigo-800">${pages.length} Page(s)</span>
+          <span class="text-xs font-bold text-indigo-400">📅 ${dateStr}</span>
+          <span class="text-[10px] bg-indigo-950 text-indigo-300 px-2 py-0.5 rounded-full border border-indigo-800">${pageKeys.length} Page(s)</span>
         </div>
-        <p class="text-xs text-slate-300 line-clamp-2 font-serif mt-2">${previewText}</p>
+        <h4 class="text-xs font-bold text-slate-200 mb-1 truncate">${session.title || 'Diary Session'}</h4>
+        <p class="text-xs text-slate-400 line-clamp-2 font-serif">${previewText}</p>
       </div>
       <div class="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between">
-        <span class="text-xs text-indigo-400 font-medium group-hover:underline">Open Book View ➔</span>
-        <span class="text-[10px] text-slate-500">Pages: ${pages.length}</span>
+        <span class="text-xs text-indigo-300 font-medium group-hover:underline">📖 Open Book View</span>
+        <span class="text-[10px] text-slate-500">Mood: ${firstPage.mood || 7}/10</span>
       </div>
     `;
 
-    card.addEventListener('click', () => {
-      openBookModal(dateStr, pages);
+    card.addEventListener('click', (e) => {
+      // If clicked on open book view or card body, let's open the modal reader or switch session
+      openBookModal(dateStr, session);
     });
 
     vaultGrid.appendChild(card);
   });
 }
 
-// Book Reader Modal Logic (Fixed to properly show all compiled pages)
-function openBookModal(dateStr, pages) {
-  activeBookDate = dateStr;
-  activeBookPages = pages;
+// Book Reader Modal Logic
+function openBookModal(dateStr, session) {
+  activeBookPages = Object.keys(session.pages).sort((a,b) => a - b).map(pNum => ({
+    pageNum: pNum,
+    data: session.pages[pNum]
+  }));
   activeBookIndex = 0;
-  document.getElementById('modalBookTitle').textContent = `📖 Diary Book: ${dateStr}`;
+
+  document.getElementById('modalBookTitle').textContent = `📖 Diary: ${session.title || dateStr} (${dateStr})`;
   document.getElementById('bookModal').classList.remove('hidden');
   renderBookModalPage();
 }
@@ -222,9 +250,8 @@ function renderBookModalPage() {
   document.getElementById('modalBookSubtitle').textContent = `Page ${currentP.pageNum} of ${activeBookPages.length} (Mood: ${currentP.data.mood || 7}/10)`;
   document.getElementById('bookPageIndicator').textContent = `Page ${activeBookIndex + 1} / ${activeBookPages.length}`;
   
-  document.getElementById('modalPageTextener') || (document.getElementById('modalPageText').textContent = currentP.data.text || '(No text on this page)');
+  document.getElementById('modalPageText').textContent = currentP.data.text || '(No text on this page)';
 
-  // Render stickers inside modal view
   const stickersArea = document.getElementById('modalStickersArea');
   stickersArea.innerHTML = '';
   if (currentP.data.stickers && Array.isArray(currentP.data.stickers)) {
@@ -233,7 +260,6 @@ function renderBookModalPage() {
     });
   }
 
-  // Render doodles inside modal canvas
   const mCanvas = document.getElementById('modalCanvas');
   const mCtx = mCanvas.getContext('2d');
   mCanvas.width = mCanvas.parentElement.clientWidth - 80;
@@ -245,7 +271,6 @@ function renderBookModalPage() {
     dImg.src = currentP.data.doodle;
   }
 
-  // Toggle buttons visibility/opacity
   const prevBtn = document.getElementById('prevBookPageBtn');
   const nextBtn = document.getElementById('nextBookPageBtn');
   
@@ -270,19 +295,17 @@ function closeBookModal() {
 
 // Charts & Tools
 function updateCharts() {
-  const keys = Object.keys(journalData).sort();
+  const sessionIds = Object.keys(journalData).sort().slice(-7);
   const labels = [], moodVals = [], energyVals = [];
-  const uniqueDates = [...new Set(keys.map(k => k.split('_')[0]))].slice(-7);
   
-  uniqueDates.forEach(d => {
+  sessionIds.forEach(d => {
     labels.push(d);
+    const session = journalData[d];
     let sumM = 0, sumE = 0, count = 0;
-    keys.forEach(k => {
-      if (k.startsWith(d)) {
-        sumM += (journalData[k].mood || 7);
-        sumE += (journalData[k].energy || 6);
-        count++;
-      }
+    Object.values(session.pages).forEach(page => {
+      sumM += (page.mood || 7);
+      sumE += (page.energy || 6);
+      count++;
     });
     moodVals.push(Math.round(sumM / count));
     energyVals.push(Math.round(sumE / count));
@@ -454,9 +477,9 @@ function setHorizon(horizon) {
     else btn.className = "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition";
   });
   const desc = {
-    daily: "Analyzing today's multi-page booklet.",
+    daily: "Analyzing today's multi-page booklet session.",
     weekly: "Synthesizing the past 7 days of reflections, moods, and energy trends.",
-    monthly: "Detecting deeper emotional themes across this month's journal entries.",
+    monthly: "Detecting deeper emotional themes across this month's journal sessions.",
     yearly: "Long-term psychological horizon review and milestone progression."
   };
   document.getElementById('horizonDescription').textContent = desc[horizon];
@@ -465,17 +488,18 @@ function setHorizon(horizon) {
 document.getElementById('generateAiBtn').addEventListener('click', async () => {
   saveCurrentPage();
   const output = document.getElementById('aiOutput');
-  output.innerHTML = '<span class="text-indigo-400">✨ Analyzing today’s entire book with AI...</span>';
+  output.innerHTML = '<span class="text-indigo-400">✨ Analyzing today’s session booklet with AI...</span>';
 
+  const session = journalData[currentSessionId];
   let bookletText = "";
-  Object.keys(journalData).forEach(k => {
-    if (k.startsWith(currentDate + '_page_')) {
-      bookletText += `\n--- Page ---\n` + (journalData[k].text || '');
-    }
-  });
+  if (session && session.pages) {
+    Object.keys(session.pages).sort((a,b) => a - b).forEach(pNum => {
+      bookletText += `\n--- Page ${pNum} ---\n` + (session.pages[pNum].text || '');
+    });
+  }
 
   if (!bookletText.trim()) {
-    output.innerHTML = `<span class="text-amber-400">⚠️ No pages found for this date. Write something first!</span>`;
+    output.innerHTML = `<span class="text-amber-400">⚠️ No text found in this session. Write something first!</span>`;
     return;
   }
 
@@ -483,11 +507,11 @@ document.getElementById('generateAiBtn').addEventListener('click', async () => {
     const response = await fetch('/api/reflect', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: `Analyze this multi-page diary booklet for ${currentDate} (${currentHorizon} horizon) and provide psychological insights in English:\n\n${bookletText}` })
+      body: JSON.stringify({ prompt: `Analyze this diary session titled "${session.title}" for date ${currentSessionId} (${currentHorizon} horizon) and provide psychological insights in English:\n\n${bookletText}` })
     });
     const data = await response.json();
     if (response.ok) {
-      output.innerHTML = `<div class="space-y-2"><div class="font-bold text-indigo-300 capitalize">🌟 ${currentHorizon} Book Analysis:</div><p class="whitespace-pre-line text-slate-200">${data.text}</p></div>`;
+      output.innerHTML = `<div class="space-y-2"><div class="font-bold text-indigo-300 capitalize">🌟 ${currentHorizon} Session Analysis:</div><p class="whitespace-pre-line text-slate-200">${data.text}</p></div>`;
     } else {
       output.innerHTML = `<span class="text-red-400">Error: ${data.error || 'Failed'}</span>`;
     }
